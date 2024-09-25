@@ -91,9 +91,9 @@ def train(cfg: DictConfig) -> None:
 
     # callbacks declaration
     callbacks = [
-        REStrongMatchingCallback(
-            to_absolute_path(cfg.data.val_dataset_path), cfg.data.val_dataset
-        ),
+        # REStrongMatchingCallback(
+        #     to_absolute_path(cfg.data.val_dataset_path), cfg.data.val_dataset
+        # ),
         ModelCheckpoint(
             "model",
             filename="{epoch}-{val_f1:.2f}",
@@ -103,6 +103,8 @@ def train(cfg: DictConfig) -> None:
         ),
         LearningRateMonitor(),
     ]
+
+    callbacks.append(hydra.utils.instantiate(cfg.training.evaluation))
 
     if (
         cfg.data.train_dataset.section_size == None
@@ -127,8 +129,8 @@ def train(cfg: DictConfig) -> None:
     # Trainer fit
     trainer.fit(
         model=model,
-        train_dataloaders=DataLoader(train_dataset, batch_size=None, num_workers=0),
-        val_dataloaders=DataLoader(val_dataset, batch_size=None, num_workers=0),
+        train_dataloaders=DataLoader(train_dataset, batch_size=None, num_workers=4),
+        val_dataloaders=DataLoader(val_dataset, batch_size=None, num_workers=4),
         ckpt_path=(
             cfg.training.ckpt_path
             if "ckpt_path" in cfg.training and cfg.training.ckpt_path

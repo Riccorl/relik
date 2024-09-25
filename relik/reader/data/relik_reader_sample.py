@@ -39,6 +39,22 @@ class RelikReaderSample:
             super().__setattr__(key, value)
 
     def to_jsons(self) -> str:
+        # if "predicted_window_labels" in self._d:
+        #     new_obj = {
+        #         k: v
+        #         for k, v in self._d.items()
+        #         if k != "predicted_window_labels" and k != "span_title_probabilities"
+        #     }
+        #     new_obj["predicted_window_labels"] = [
+        #         [ss, se, pred_title]
+        #         for (ss, se), pred_title in self.predicted_window_labels_chars
+        #     ]
+        # else:
+        #     new_obj = self._d
+        # new_obj = {k: v for k, v in new_obj.items() if v}
+        return json.dumps(self.to_dict(), cls=NpEncoder)
+
+    def to_dict(self) -> dict:
         if "predicted_window_labels" in self._d:
             new_obj = {
                 k: v
@@ -50,10 +66,9 @@ class RelikReaderSample:
                 for (ss, se), pred_title in self.predicted_window_labels_chars
             ]
         else:
-            return json.dumps(self._d, cls=NpEncoder)
-
-    def to_dict(self) -> dict:
-        return self._d
+            new_obj = self._d
+        
+        return new_obj
 
 
 def load_relik_reader_samples(path: str) -> Iterable[RelikReaderSample]:

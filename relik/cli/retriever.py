@@ -64,7 +64,7 @@ def create_index(
     document_path: str,
     output_folder: str,
     document_file_type: str = "jsonl",
-    passage_encoder_name_or_path: Optional[str] = None,
+    passage_encoder_name_or_path: str | None = None,
     indexer_class: str = "relik.retriever.indexers.inmemory.InMemoryDocumentIndex",
     batch_size: int = 512,
     num_workers: int = 4,
@@ -73,7 +73,7 @@ def create_index(
     index_device: str = "cpu",
     precision: str = "fp32",
     push_to_hub: bool = False,
-    repo_id: Optional[str] = None,
+    repo_id: str | None = None,
 ):
     """
     Builds an index for document retrieval.
@@ -172,7 +172,7 @@ def add_candidates(
     document_name_or_path: str,
     input_path: str,
     output_path: str,
-    passage_encoder_name_or_path: Optional[str] = None,
+    passage_encoder_name_or_path: str | None = None,
     relations: bool = False,
     top_k: int = 100,
     batch_size: int = 128,

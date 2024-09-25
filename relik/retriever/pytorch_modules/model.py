@@ -165,16 +165,62 @@ class GoldenRetriever(torch.nn.Module):
 
         if passages_per_question is not None:
             # multiply each question encoding with a passages_per_question encodings
-            concatenated_passages = torch.stack(
-                torch.split(passages_encodings, passages_per_question)
-            ).transpose(1, 2)
+            # prepare passages_encodings for bmm
+            splitted_passages_encodings = torch.split(
+                passages_encodings, passages_per_question
+            )
+            # Find the maximum number of passages
+            max_num_passages = max(
+                tensor.shape[0] for tensor in splitted_passages_encodings
+            )
+
+            # Pad each tensor to have the same number of passages
+            padded_splitted_passages_encodings = [
+                F.pad(tensor, (0, 0, 0, max_num_passages - tensor.shape[0]), value=0)
+                for tensor in splitted_passages_encodings
+            ]
+
+            # Stack the padded tensors to create passages_encodings
+            concatenated_passages_encodings = torch.stack(
+                padded_splitted_passages_encodings
+            )  # Shape: (batch_size, max_num_passages, vector_dim)
+
+            # Create a mask to identify valid entries
+            mask = torch.tensor(
+                [
+                    [1] * tensor.shape[0] + [0] * (max_num_passages - tensor.shape[0])
+                    for tensor in splitted_passages_encodings
+                ],
+                dtype=concatenated_passages_encodings.dtype,
+                
+            )  # Shape: (batch_size, max_num_passages)
+
+            # question_encodings = question_encodings.unsqueeze(1)
+            # concatenated_passages = torch.stack(
+            #     torch.split(passages_encodings, passages_per_question)
+            # ).transpose(1, 2)
             if isinstance(self.loss_type, torch.nn.BCEWithLogitsLoss):
                 # normalize the encodings for cosine similarity
-                concatenated_passages = F.normalize(concatenated_passages, p=2, dim=2)
+                concatenated_passages_encodings = F.normalize(
+                    concatenated_passages_encodings, p=2, dim=2
+                )
                 question_encodings = F.normalize(question_encodings, p=2, dim=1)
+            # logits = torch.bmm(
+            #     question_encodings.unsqueeze(1), concatenated_passages
+            # ).view(question_encodings.shape[0], -1)
+            # Perform batch matrix multiplication
+            # Shape: (batch_size, max_num_passages)
             logits = torch.bmm(
-                question_encodings.unsqueeze(1), concatenated_passages
-            ).view(question_encodings.shape[0], -1)
+                question_encodings.unsqueeze(1),
+                concatenated_passages_encodings.transpose(1, 2),
+            ).squeeze(1)
+            # Apply the mask to ignore padded values
+            # logits = logits * mask  # Shape: (batch_size, max_num_passages)
+
+            # flat the logits and labels
+            logits = logits.flatten()
+            labels = labels.flatten()
+
         else:
             if isinstance(self.loss_type, torch.nn.BCEWithLogitsLoss):
                 # normalize the encodings for cosine similarity

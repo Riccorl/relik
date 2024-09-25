@@ -6,7 +6,6 @@ from typing import Annotated, Dict, List, Union
 import psutil
 
 import torch
-import uvicorn
 
 from relik.common.utils import is_package_available
 from relik.inference.annotator import Relik
@@ -18,6 +17,12 @@ if not is_package_available("fastapi"):
         "FastAPI is not installed. Please install FastAPI with `pip install relik[serve]`."
     )
 from fastapi import FastAPI, HTTPException, APIRouter, Query
+
+if not is_package_available("uvicorn"):
+    raise ImportError(
+        "Uvicorn is not installed. Please install Uvicorn with `pip install relik[serve]`."
+    )
+import uvicorn
 
 
 from relik.common.log import get_logger

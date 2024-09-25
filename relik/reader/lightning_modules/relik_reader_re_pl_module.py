@@ -3,6 +3,7 @@ from typing import Any, Optional
 import lightning
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
 
+from relik.common.utils import get_callable_from_string
 from relik.reader.pytorch_modules.triplet import RelikReaderForTripletExtraction
 
 
@@ -24,10 +25,16 @@ class RelikReaderREPLModule(lightning.LightningModule):
         *args: Any,
         **kwargs: Any
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args)
         self.save_hyperparameters()
 
-        self.relik_reader_re_model = RelikReaderForTripletExtraction(
+        reader_wrapper_class = kwargs.get("reader_wrapper_class", None)
+        if reader_wrapper_class is not None:
+            reader_wrapper_class = get_callable_from_string(reader_wrapper_class)
+        else:
+            reader_wrapper_class = RelikReaderForTripletExtraction
+
+        self.relik_reader_re_model = reader_wrapper_class(
             transformer_model,
             additional_special_symbols,
             additional_special_symbols_types,
@@ -45,12 +52,15 @@ class RelikReaderREPLModule(lightning.LightningModule):
 
     def training_step(self, batch: dict, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
         relik_output = self.relik_reader_re_model(**batch)
-        self.log("train-loss", relik_output["loss"])
-        self.log("train-start_loss", relik_output["ned_start_loss"])
-        self.log("train-end_loss", relik_output["ned_end_loss"])
-        self.log("train-relation_loss", relik_output["re_loss"])
-        if "ned_type_loss" in relik_output:
-            self.log("train-ned_type_loss", relik_output["ned_type_loss"])
+        # self.log("train-loss", relik_output["loss"], prog_bar=True)
+        # self.log("train-start_loss", relik_output["ned_start_loss"])
+        # self.log("train-end_loss", relik_output["ned_end_loss"])
+        # self.log("train-relation_loss", relik_output["re_loss"])
+        # if "ned_type_loss" in relik_output:
+        #     self.log("train-ned_type_loss", relik_output["ned_type_loss"])
+        for key, value in relik_output.items():
+            if "loss" in key:
+                self.log(f"train-{key}", value)
         return relik_output["loss"]
 
     def validation_step(

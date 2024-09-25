@@ -155,6 +155,7 @@ class RelikDataset(IterableDataset):
         drop_last: bool = False,
         samples: Optional[Iterator[RelikReaderSample]] = None,
         lowercase_policy: float = 0.0,
+        max_candidates: int = -1,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -206,6 +207,8 @@ class RelikDataset(IterableDataset):
         self.drop_last = drop_last
         self.lowercase_policy = lowercase_policy
         self.samples = samples
+
+        self.max_candidates = max_candidates
 
     def _build_tokenizer(self, transformer_model: str, special_symbols: List[str]):
         return AutoTokenizer.from_pretrained(
@@ -571,9 +574,14 @@ class RelikDataset(IterableDataset):
             sample_bag, used_candidates = None, None
             # TODO: compatibility shit
             # sample.window_candidates = sample.span_candidates
+
             remaining_candidates = list(sample.span_candidates)
+            # limit candidates
+            if self.max_candidates != -1:
+                remaining_candidates = remaining_candidates[:self.max_candidates]
 
             if not self.for_inference:
+
                 # randomly drop gold candidates at training time
                 if (
                     self.random_drop_gold_candidates > 0.0

@@ -38,17 +38,17 @@ class GoldenRetrieverDataset:
         passage_batch_size: int = 32,
         question_batch_size: int = 32,
         max_positives: int = -1,
-        max_negatives: int = 0,
-        max_hard_negatives: int = 0,
+        max_negatives: int = -1,
+        max_hard_negatives: int = -1,
         max_question_length: int = 256,
-        max_passage_length: int = 64,
+        max_passage_length: int = 256,
         metadata_fields: Optional[Sequence[str]] = None,
         metadata_separator: str = "\t",
         shuffle: bool = False,
         subsample_strategy: Optional[str] = SubsampleStrategyEnum.NONE,
         subsample_portion: float = 0.1,
         num_proc: Optional[int] = None,
-        load_from_cache_file: bool = True,
+        load_from_cache_file: bool = False,
         keep_in_memory: bool = False,
         prefetch: bool = True,
         load_fn_kwargs: Optional[Dict[str, Any]] = None,
@@ -84,6 +84,9 @@ class GoldenRetrieverDataset:
         self.load_from_cache_file = load_from_cache_file
         self.keep_in_memory = keep_in_memory
         self.prefetch = prefetch
+        self.load_fn_kwargs = load_fn_kwargs
+        self.batch_fn_kwargs = batch_fn_kwargs
+        self.collate_fn_kwargs = collate_fn_kwargs
 
         self.tokenizer = tokenizer
         if isinstance(self.tokenizer, str):
@@ -172,7 +175,7 @@ class GoldenRetrieverDataset:
         max_hard_negatives: int = -1,
         max_passages: int = -1,
         max_question_length: int = 256,
-        max_passage_length: int = 64,
+        max_passage_length: int = 256,
         *args,
         **kwargs,
     ) -> Any:
@@ -722,3 +725,282 @@ class AidaInBatchNegativesDataset(InBatchNegativesDataset):
             positive_pssgs=passage[: len(positives)],
         )
         return output
+
+
+class SampleNegativesDataset(GoldenRetrieverDataset):
+    def __len__(self) -> int:
+        if isinstance(self.data, datasets.Dataset):
+            return len(self.data)
+
+    def __getitem__(
+        self, index
+    ) -> Union[Dict[str, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
+        return self.data[index]
+
+    def to_torch_dataset(self) -> torch.utils.data.Dataset:
+        shuffle_this_time = self.shuffle
+
+        if (
+            self.subsample_strategy
+            and self.subsample_strategy != SubsampleStrategyEnum.NONE
+        ):
+            number_of_samples = int(len(self.data) * self.subsample_portion)
+            if self.subsample_strategy == SubsampleStrategyEnum.RANDOM:
+                logger.info(
+                    f"Random subsampling {number_of_samples} samples from {len(self.data)}"
+                )
+                data = (
+                    deepcopy(self.data)
+                    .shuffle(seed=42 + self.number_of_complete_iterations)
+                    .select(range(0, number_of_samples))
+                )
+            elif self.subsample_strategy == SubsampleStrategyEnum.IN_ORDER:
+                # number_of_samples = int(len(self.data) * self.subsample_portion)
+                already_selected = (
+                    number_of_samples * self.number_of_complete_iterations
+                )
+                logger.info(
+                    f"Subsampling {number_of_samples} samples out of {len(self.data)}"
+                )
+                to_select = min(already_selected + number_of_samples, len(self.data))
+                logger.info(
+                    f"Portion of data selected: {already_selected} " f"to {to_select}"
+                )
+                data = deepcopy(self.data).select(range(already_selected, to_select))
+
+                # don't shuffle the data if we are subsampling, and we have still not completed
+                # one full iteration over the dataset
+                if self.number_of_complete_iterations > 0:
+                    shuffle_this_time = False
+
+                # reset the number of complete iterations
+                if to_select >= len(self.data):
+                    # reset the number of complete iterations,
+                    # we have completed one full iteration over the dataset
+                    # the value is -1 because we want to start from 0 at the next iteration
+                    self.number_of_complete_iterations = -1
+            else:
+                raise ValueError(
+                    f"Subsample strategy `{self.subsample_strategy}` is not valid. "
+                    f"Valid strategies are: {SubsampleStrategyEnum.__members__}"
+                )
+
+        else:
+            data = data = self.data
+
+        # do we need to shuffle the data?
+        if self.shuffle and shuffle_this_time:
+            logger.info("Shuffling the data")
+            data = data.shuffle(seed=42 + self.number_of_complete_iterations)
+
+        batch_fn_kwargs = {
+            "question_batch_size": self.question_batch_size,
+            "hard_negatives_manager": self.hn_manager,
+        }
+        batched_data = self.create_batches(
+            data,
+            batch_fn=self.batch_fn,
+            batch_fn_kwargs=batch_fn_kwargs,
+            prefetch=self.prefetch,
+        )
+
+        batched_data = self.collate_batches(
+            batched_data, self.collate_fn, prefetch=self.prefetch
+        )
+
+        # increment the number of complete iterations
+        self.number_of_complete_iterations += 1
+
+        if self.prefetch:
+            return BaseDataset(name=self.name, data=batched_data)
+        else:
+            return IterableBaseDataset(name=self.name, data=batched_data)
+
+    @staticmethod
+    def load_fn(
+        sample: Dict,
+        tokenizer: tr.PreTrainedTokenizer,
+        max_positives: int,
+        max_negatives: int,
+        max_hard_negatives: int,
+        max_passages: int = -1,
+        max_question_length: int = 256,
+        max_passage_length: int = 128,
+        *args,
+        **kwargs,
+    ) -> Dict:
+        # remove duplicates and limit the number of passages
+        positives = list(set([p["text"] for p in sample["positive_ctxs"]]))
+        if max_positives != -1:
+            positives = positives[:max_positives]
+        negatives = list(set([n["text"] for n in sample["negative_ctxs"]]))
+        if max_negatives != -1:
+            negatives = negatives[:max_negatives]
+        hard_negatives = list(set([h["text"] for h in sample["hard_negative_ctxs"]]))
+        if max_hard_negatives != -1:
+            hard_negatives = hard_negatives[:max_hard_negatives]
+
+        question = tokenizer(
+            sample["question"], max_length=max_question_length, truncation=True
+        )
+
+        passage = positives + negatives + hard_negatives
+        if max_passages != -1:
+            passage = passage[:max_passages]
+
+        passage = tokenizer(passage, max_length=max_passage_length, truncation=True)
+
+        # invert the passage data structure from a dict of lists to a list of dicts
+        passage = [dict(zip(passage, t)) for t in zip(*passage.values())]
+
+        output = dict(
+            question=question,
+            passage=passage,
+            positives=positives,
+            positive_pssgs=passage[: len(positives)],
+            positive_index_end=len(positives),
+        )
+        return output
+
+    @staticmethod
+    def batch_fn(
+        data: Dataset,
+        question_batch_size: int,
+        hard_negatives_manager: Optional[HardNegativesManager] = None,
+        *args,
+        **kwargs,
+    ) -> Any:
+
+        batch = []
+        for sample in data:
+            if len(batch) >= question_batch_size:
+                yield batch
+                # reset batch
+                batch = []
+
+            # check for hard negatives and add with a probability of 0.1
+            if hard_negatives_manager is not None:
+                if sample["sample_idx"] in hard_negatives_manager:
+                    sample["retrieved_hard_negatives"] = hard_negatives_manager.get(
+                        sample["sample_idx"]
+                    )
+
+            batch.append(sample)
+            # yes it's a bit ugly but it works :)
+            # count the number of passages in the batch and stop if we reach the limit
+            # we use a set to avoid counting the same passage twice
+            # we use a tuple because set doesn't support lists
+            # we use input_ids as discriminator
+            # passages_in_batch.update(
+            #     {tuple(passage["input_ids"]): passage for passage in sample["passage"]}
+            # )
+            # check for hard negatives
+            # if hard_negatives_manager is not None:
+            #     if sample["sample_idx"] in hard_negatives_manager:
+            #         passages_in_batch.update(
+            #             {
+            #                 tuple(passage["input_ids"]): passage
+            #                 for passage in hard_negatives_manager.get(
+            #                     sample["sample_idx"]
+            #                 )
+            #             }
+            #         )
+
+        # left over
+        if len(batch) > 0:
+            yield batch
+            # create the batch dict
+            # batch_dict = ModelInputs(
+            #     dict(
+            #         sample_idx=[s["sample_idx"] for s in batch],
+            #         questions=[s["question"] for s in batch],
+            #         passages=list(passages_in_batch.values()),
+            #         positives_pssgs=[s["positive_pssgs"] for s in batch],
+            #         positives=[s["positives"] for s in batch],
+            #     )
+            # )
+            # # split the batch if needed
+            # if len(batch) > question_batch_size:
+            #     for splited_batch in split_batch(batch_dict, question_batch_size):
+            #         yield splited_batch
+            # else:
+            #     yield batch_dict
+
+    # def collate_fn(self, batch: Any, *args, **kwargs) -> Any:
+    #     # convert questions and passages to a batch
+    #     questions = self.convert_to_batch(batch.questions)
+    #     passages = self.convert_to_batch(batch.passages)
+
+    #     # build an index to map the position of the passage in the batch
+    #     passage_index = {tuple(c["input_ids"]): i for i, c in enumerate(batch.passages)}
+
+    #     # now we can create the labels
+    #     labels = torch.zeros(
+    #         questions["input_ids"].shape[0], passages["input_ids"].shape[0]
+    #     )
+    #     # iterate over the questions and set the labels to 1 if the passage is positive
+    #     for sample_idx in range(len(questions["input_ids"])):
+    #         for pssg in batch["positives_pssgs"][sample_idx]:
+    #             # get the index of the positive passage
+    #             index = passage_index[tuple(pssg["input_ids"])]
+    #             # set the label to 1
+    #             labels[sample_idx, index] = 1
+
+    #     model_inputs = ModelInputs(
+    #         {
+    #             "questions": questions,
+    #             "passages": passages,
+    #             "labels": labels,
+    #             "positives": batch["positives"],
+    #             "sample_idx": batch["sample_idx"],
+    #         }
+    #     )
+    #     return model_inputs
+
+    def collate_fn(self, batch: Any, *args, **kwargs) -> Any:
+        # convert questions and passages to a batch
+        questions = [sample["question"] for sample in batch]
+        passages = [sample["passage"] for sample in batch]
+        positives = [sample["positives"] for sample in batch]
+        # if "retrieved_hard_negatives" in batch[0]:
+        #     # add augmented negative contexts to contexts
+        #     retrieved_hard_negatives = [
+        #         sample["retrieved_hard_negatives"] for sample in batch
+        #     ]
+        #     passages = [
+        #         # remove the last len(a) contexts to add the augmented negative context
+        #         c[: -len(a)] + a
+        #         for c, a in zip(passages, retrieved_hard_negatives)
+        #     ]
+
+        questions = self.convert_to_batch(questions)
+        # first flat the list of lists of contexts
+        passages = [c for ctxs in passages for c in ctxs]
+        # invert contexts from list of dict to dict of list
+        passages = self.convert_to_batch(passages)
+
+        augmented_labels: Optional[torch.Tensor] = None
+        passages_per_question = [len(sample["passage"]) for sample in batch]
+        labels = [[0] * c for c in passages_per_question]
+        # pad the labels
+        labels = [
+            self.pad_sequence(l, max(passages_per_question), value=-100) for l in labels
+        ]
+        # convert to tensor
+        labels = torch.as_tensor(labels)
+        # labels is a mask of positive contexts for each question base on positive_index_end
+        # has shape num_questions x num_contexts
+        positive_index_end = [sample["positive_index_end"] for sample in batch]
+        for i, end in enumerate(positive_index_end):
+            labels[i, :end] = 1
+
+        model_inputs = {
+            "questions": ModelInputs(questions),
+            "passages": ModelInputs(passages),
+            "labels": augmented_labels if augmented_labels is not None else labels,
+            "positives": positives,
+            "sample_idx": [sample["sample_idx"] for sample in batch],
+        }
+        if passages_per_question is not None:
+            model_inputs["passages_per_question"] = passages_per_question
+        return ModelInputs(model_inputs)

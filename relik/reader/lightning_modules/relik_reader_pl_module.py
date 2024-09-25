@@ -35,7 +35,7 @@ class RelikReaderPLModule(lightning.LightningModule):
 
     def training_step(self, batch: dict, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
         relik_output = self.relik_reader_core_model(**batch)
-        self.log("train-loss", relik_output["loss"])
+        self.log("train-loss", relik_output["loss"], prog_bar=True)
         return relik_output["loss"]
 
     def validation_step(

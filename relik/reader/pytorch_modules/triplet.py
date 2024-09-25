@@ -337,6 +337,7 @@ class RelikReaderForTripletExtraction(RelikReaderBase):
             special_symbols_mask=special_symbols_mask,
             special_symbols_mask_entities=special_symbols_mask_entities,
             is_prediction=True,
+            sample=sample,
             *args,
             **kwargs,
         )

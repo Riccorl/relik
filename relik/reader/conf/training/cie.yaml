@@ -11,3 +11,9 @@ trainer:
   limit_val_batches: 1
   gradient_clip_val: 1.0
   accumulate_grad_batches: 2
+
+evaluation:
+  _target_: relik.reader.evaluation.re_strong_matching.REStrongMatchingCallback
+  dataset_path: ${hydra.utils.to_absolute_path($data.val_dataset_path)}
+  dataset_conf: ${data.val_dataset}
+  log_metric: "val_"

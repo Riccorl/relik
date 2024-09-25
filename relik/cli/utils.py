@@ -41,15 +41,17 @@ def resolve_config(type: str | None = None) -> OmegaConf:
     #     context = initialize_config_dir(config_dir=str(config_path), version_base="1.3")
     # else:
     if not config_dir.is_absolute():
-        base_path = Path(__file__).parent.parent
-        if type == "reader":
-            config_dir = base_path / "reader" / "conf"
-        elif type == "retriever":
-            config_dir = base_path / "retriever" / "conf"
-        else:
-            raise ValueError(
-                "Please provide the type (`reader` or `retriever`) or provide an absolute path."
-            )
+        # base_path = Path(__file__).parent.parent
+        base_path = Path.cwd()
+        config_dir = base_path / config_dir
+        # if type == "reader":
+        #     config_dir = base_path / "reader" / "conf"
+        # elif type == "retriever":
+        #     config_dir = base_path / "retriever" / "conf"
+        # else:
+        #     raise ValueError(
+        #         "Please provide the type (`reader` or `retriever`) or provide an absolute path."
+        #     )
     logger.debug(f"config_dir: {config_dir}")
     # logger.debug(f"config_name: {config_name}")
 
