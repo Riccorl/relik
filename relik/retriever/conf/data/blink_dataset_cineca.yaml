@@ -1,34 +1,36 @@
-train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/aida_32_tokens_topic/train.jsonl
+# train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/blink/window_32_tokens_25032024/train.fixed.jsonl
+# train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/blink_32_tokens/first_1M.jsonl
+train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/blink/window_32_tokens_25032024/train.fixed.first2M.jsonl
 val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/aida_32_tokens_topic/val.jsonl
-test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/aida_32_tokens_topic/test.jsonl
+test_dataset_path: null
 
 shared_params:
   documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/documents.jsonl
   max_passage_length: 128
   passage_batch_size: 400
   question_batch_size: 256
-  use_topics: True
 
 datamodule:
   _target_: relik.retriever.lightning_modules.pl_data_modules.GoldenRetrieverPLDataModule
   datasets:
     train:
-      _target_: relik.retriever.data.datasets.AidaInBatchNegativesDataset
+      _target_: relik.retriever.data.datasets.InBatchNegativesDataset
       name: "train"
       path: ${data.train_dataset_path}
       tokenizer: ${model.language_model}
       max_passage_length: ${data.shared_params.max_passage_length}
       question_batch_size: ${data.shared_params.question_batch_size}
       passage_batch_size: ${data.shared_params.passage_batch_size}
-      subsample_strategy: null
+      subsample_strategy: random
       subsample_portion: 0.1
-      shuffle: True
       metadata_fields: ['definition']
       metadata_separator: ' <def> '
-      use_topics: ${data.shared_params.use_topics}
+      shuffle: True
+      load_from_cache_file: True
+      prefetch: True
 
     val:
-      - _target_: relik.retriever.data.datasets.AidaInBatchNegativesDataset
+      - _target_: relik.retriever.data.datasets.InBatchNegativesDataset
         name: "val"
         path: ${data.val_dataset_path}
         tokenizer: ${model.language_model}
@@ -37,10 +39,10 @@ datamodule:
         passage_batch_size: ${data.shared_params.passage_batch_size}
         metadata_fields: ['definition']
         metadata_separator: ' <def> '
-        use_topics: ${data.shared_params.use_topics}
+        load_from_cache_file: True
 
     test:
-      - _target_: relik.retriever.data.datasets.AidaInBatchNegativesDataset
+      - _target_: relik.retriever.data.datasets.InBatchNegativesDataset
         name: "test"
         path: ${data.test_dataset_path}
         tokenizer: ${model.language_model}
@@ -49,7 +51,7 @@ datamodule:
         passage_batch_size: ${data.shared_params.passage_batch_size}
         metadata_fields: ['definition']
         metadata_separator: ' <def> '
-        use_topics: ${data.shared_params.use_topics}
+        load_from_cache_file: True
 
   num_workers:
     train: 4

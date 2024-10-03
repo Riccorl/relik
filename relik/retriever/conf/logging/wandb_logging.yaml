@@ -8,7 +8,7 @@ wandb_arg:
   project: ${project_name}
   save_dir: ./
   log_model: True
-  mode: "online"
+  mode: "offline"
   entity: null
 
 watch:
