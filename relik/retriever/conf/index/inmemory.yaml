@@ -4,6 +4,6 @@ documents:
   file_path: ${data.shared_params.documents_path}
 device: "cuda"
 precision: "16"
-metadata_fields:
-  - "description"
-separator: " <def> "
+# metadata_fields:
+#   - "description"
+# separator: " <def> "

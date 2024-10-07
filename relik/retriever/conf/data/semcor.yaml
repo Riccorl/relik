@@ -1,0 +1,57 @@
+train_dataset_path: /media/data/relik/data/wsd/relik-defs/semcor.windows.dpr.jsonl
+val_dataset_path: /media/data/relik/data/wsd/relik-defs/semeval2007.windows.dpr.jsonl
+test_dataset_path: /media/data/relik/data/wsd/relik-defs/all.windows.dpr.jsonl
+
+shared_params:
+  documents_path: /media/data/relik/data/wsd/documents/wordnet.jsonl
+  max_passage_length: 128
+  passage_batch_size: 400
+  question_batch_size: 256
+  use_topics: False
+
+datamodule:
+  _target_: relik.retriever.lightning_modules.pl_data_modules.GoldenRetrieverPLDataModule
+  datasets:
+    train:
+      _target_: relik.retriever.data.datasets.InBatchNegativesDataset
+      name: "train"
+      path: ${data.train_dataset_path}
+      tokenizer: ${model.language_model}
+      max_passage_length: ${data.shared_params.max_passage_length}
+      question_batch_size: ${data.shared_params.question_batch_size}
+      passage_batch_size: ${data.shared_params.passage_batch_size}
+      subsample_strategy: null
+      subsample_portion: 0.1
+      # shuffle: True
+      # metadata_fields: ["definition"]
+      # metadata_separator: " <def> "
+      # use_topics: ${data.shared_params.use_topics}
+
+    val:
+      - _target_: relik.retriever.data.datasets.InBatchNegativesDataset
+        name: "val"
+        path: ${data.val_dataset_path}
+        tokenizer: ${model.language_model}
+        max_passage_length: ${data.shared_params.max_passage_length}
+        question_batch_size: ${data.shared_params.question_batch_size}
+        passage_batch_size: ${data.shared_params.passage_batch_size}
+        # metadata_fields: ["description"]
+        # metadata_separator: " <def> "
+        # use_topics: ${data.shared_params.use_topics}
+
+    test:
+      - _target_: relik.retriever.data.datasets.InBatchNegativesDataset
+        name: "test"
+        path: ${data.test_dataset_path}
+        tokenizer: ${model.language_model}
+        max_passage_length: ${data.shared_params.max_passage_length}
+        question_batch_size: ${data.shared_params.question_batch_size}
+        passage_batch_size: ${data.shared_params.passage_batch_size}
+        # metadata_fields: ["description"]
+        # metadata_separator: " <def> "
+        # use_topics: ${data.shared_params.use_topics}
+
+  num_workers:
+    train: 4
+    val: 4
+    test: 4

@@ -3,17 +3,17 @@ hydra:
   run:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: me5-small-mewsli-en-from-blink-first2M-5hn-query-passage # used to name the model in wandb
-project_name: golden-retriever-mel-thesis # used to name the project in wandb
+model_name: me5-small-semcor # used to name the model in wandb
+project_name: golden-retriever-wsd-thesis # used to name the project in wandb
 
 defaults:
   - _self_
-  - model: me5-small-blink-first2M-encoder
+  - model: me5-small
   - index: inmemory
   - loss: nce_loss
   - optimizer: radamw
   - scheduler: linear_scheduler
-  - data: mewsli_en_dataset
+  - data: semcor
   - logging: wandb_logging
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
@@ -100,8 +100,8 @@ train:
         validate_recall@${train.top_k}
         # - sanity_check_recall@${train.top_k}
       threshold: 0.0
-      max_negatives: 20
-      add_with_probability: 1.0
+      max_negatives: 15
+      add_with_probability: 0.5
       refresh_every_n_epochs: 1
       other_callbacks:
         - _target_: relik.retriever.callbacks.evaluation_callbacks.AvgRankingEvaluationCallback
