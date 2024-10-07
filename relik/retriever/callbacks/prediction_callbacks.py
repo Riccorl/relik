@@ -111,7 +111,11 @@ class GoldenRetrieverPredictionCallback(PredictionCallback):
             ):
                 force_reindex = False
             else:
-                force_reindex = self.force_reindex
+                # TODO: just for mewsli testing
+                if dataloader_idx != 0:
+                    force_reindex = False
+                else:
+                    force_reindex = self.force_reindex
 
             if (
                 not force_reindex
@@ -123,7 +127,7 @@ class GoldenRetrieverPredictionCallback(PredictionCallback):
             # you never know :)
             retriever.eval()
 
-            retriever.index(
+            document_index = retriever.index(
                 batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 max_length=current_dataset.max_passage_length,
@@ -131,6 +135,7 @@ class GoldenRetrieverPredictionCallback(PredictionCallback):
                 precision=self.precision,
                 compute_on_cpu=False,
                 force_reindex=force_reindex,
+                document_index=self.document_index,
             )
 
             # now compute the question embeddings and compute the top-k accuracy
@@ -143,18 +148,23 @@ class GoldenRetrieverPredictionCallback(PredictionCallback):
                 batch = batch.to(pl_module.device)
                 # get the top-k indices
                 retriever_output = retriever.retrieve(
-                    **batch.questions, k=self.k, precision=self.precision
+                    **batch.questions,
+                    k=self.k,
+                    precision=self.precision,
+                    document_index=document_index,
                 )
                 # compute recall at k
                 for batch_idx, retrieved_samples in enumerate(retriever_output):
                     # get the positive passages
                     gold_passages = batch["positives"][batch_idx]
+                    # remove "passage: " from the gold passages
+                    # gold_passages = [p.replace("passage: ", "") for p in gold_passages]
                     # get the index of the gold passages in the retrieved passages
                     gold_passage_indices = []
                     for passage in gold_passages:
                         try:
                             gold_passage_indices.append(
-                                retriever.get_index_from_passage(passage)
+                                document_index.get_index_from_passage(passage)
                             )
                         except ValueError:
                             logger.warning(
@@ -165,7 +175,7 @@ class GoldenRetrieverPredictionCallback(PredictionCallback):
                             pass
                     retrieved_indices = [r.document.id for r in retrieved_samples if r]
                     retrieved_passages = [
-                        retriever.get_passage_from_index(i) for i in retrieved_indices
+                        document_index.get_passage_from_index(i) for i in retrieved_indices
                     ]
                     retrieved_scores = [r.score for r in retrieved_samples]
                     # correct predictions are the passages that are in the top-k and are gold
@@ -179,10 +189,10 @@ class GoldenRetrieverPredictionCallback(PredictionCallback):
                         predictions=retrieved_passages,
                         scores=retrieved_scores,
                         correct=[
-                            retriever.get_passage_from_index(i) for i in correct_indices
+                            document_index.get_passage_from_index(i) for i in correct_indices
                         ],
                         wrong=[
-                            retriever.get_passage_from_index(i) for i in wrong_indices
+                            document_index.get_passage_from_index(i) for i in wrong_indices
                         ],
                     )
                     predictions.append(prediction_output)

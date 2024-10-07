@@ -3,7 +3,7 @@ hydra:
   run:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: me5-small-blink-eng-first1M-random-relik # used to name the model in wandb
+model_name: me5-small-blink-eng-first1M-random-mewsli-eval # used to name the model in wandb
 project_name: golden-retriever-mel-thesis # used to name the project in wandb
 
 defaults:
@@ -74,7 +74,7 @@ train:
     prediction_callback:
       _target_: relik.retriever.callbacks.prediction_callbacks.GoldenRetrieverPredictionCallback
       k: ${train.top_k}
-      batch_size: 128
+      batch_size: 256
       precision: 16
       index_precision: 16
       other_callbacks:
@@ -93,7 +93,18 @@ train:
     hard_negatives_callback:
       _target_: relik.retriever.callbacks.training_callbacks.NegativeAugmentationCallback
       k: ${train.top_k}
-      batch_size: 128
+      batch_size: 512
+      document_index:
+        _target_: relik.retriever.indexers.inmemory.InMemoryDocumentIndex
+        documents:
+          _target_: relik.retriever.indexers.document.DocumentStore.from_file
+          file_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/documents.jsonl
+        device: "cuda"
+        precision: "16"
+        metadata_fields:
+          - "definition"
+        separator: " <def> "
+
       precision: 16
       index_precision: 16
       stages: [validate] #[validate, sanity_check]

@@ -3,6 +3,7 @@ from copy import deepcopy
 from enum import Enum
 from functools import partial
 from pathlib import Path
+import random
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import datasets
@@ -44,6 +45,7 @@ class GoldenRetrieverDataset:
         max_passage_length: int = 256,
         metadata_fields: Optional[Sequence[str]] = None,
         metadata_separator: str = "\t",
+        shuffle_passages_probability: float = 0.0,
         shuffle: bool = False,
         subsample_strategy: Optional[str] = SubsampleStrategyEnum.NONE,
         subsample_portion: float = 0.1,
@@ -79,6 +81,7 @@ class GoldenRetrieverDataset:
         self.max_passage_length = max_passage_length
         self.metadata_fields = metadata_fields
         self.metadata_separator = metadata_separator
+        self.shuffle_passages_probability = shuffle_passages_probability
         self.shuffle = shuffle
         self.num_proc = num_proc
         self.load_from_cache_file = load_from_cache_file
@@ -138,6 +141,9 @@ class GoldenRetrieverDataset:
                 max_hard_negatives=max_hard_negatives,
                 max_question_length=max_question_length,
                 max_passage_length=max_passage_length,
+                metadata_fields=metadata_fields,
+                metadata_separator=metadata_separator,
+                shuffle_passages_probability=shuffle_passages_probability,
             )
         else:
             self.data: Dataset = data
@@ -176,6 +182,9 @@ class GoldenRetrieverDataset:
         max_passages: int = -1,
         max_question_length: int = 256,
         max_passage_length: int = 256,
+        metadata_fields: Optional[Sequence[str]] = None,
+        metadata_separator: str = "\t",
+        shuffle_passages_probability: float = 0.0,
         *args,
         **kwargs,
     ) -> Any:
@@ -197,6 +206,9 @@ class GoldenRetrieverDataset:
             max_passages=max_passages,
             max_question_length=max_question_length,
             max_passage_length=max_passage_length,
+            metadata_fields=metadata_fields,
+            metadata_separator=metadata_separator,
+            shuffle_passages_probability=shuffle_passages_probability,
         )
         if load_fn_kwargs is not None:
             fn_kwargs.update(load_fn_kwargs)
@@ -482,22 +494,99 @@ class InBatchNegativesDataset(GoldenRetrieverDataset):
         max_passages: int = -1,
         max_question_length: int = 256,
         max_passage_length: int = 128,
+        metadata_fields: Optional[Sequence[str]] = None,
+        metadata_separator: str = "\t",
+        shuffle_passages_probability: float = 0.0,
         *args,
         **kwargs,
     ) -> Dict:
+
+        # old code
         # remove duplicates and limit the number of passages
-        positives = list(set([p["text"] for p in sample["positive_ctxs"]]))
+        # positives = list(set([p["text"] for p in sample["positive_ctxs"]]))
+        # if max_positives != -1:
+        #     positives = positives[:max_positives]
+        # negatives = list(set([n["text"] for n in sample["negative_ctxs"]]))
+        # if max_negatives != -1:
+        #     negatives = negatives[:max_negatives]
+        # hard_negatives = list(set([h["text"] for h in sample["hard_negative_ctxs"]]))
+        # if max_hard_negatives != -1:
+        #     hard_negatives = hard_negatives[:max_hard_negatives]
+
+        # question = tokenizer(
+        #     sample["question"], max_length=max_question_length, truncation=True
+        # )
+
+        # passage = positives + negatives + hard_negatives
+        # if max_passages != -1:
+        #     passage = passage[:max_passages]
+
+        # passage = tokenizer(passage, max_length=max_passage_length, truncation=True)
+
+        # # invert the passage data structure from a dict of lists to a list of dicts
+        # passage = [dict(zip(passage, t)) for t in zip(*passage.values())]
+
+        def _get_passages(
+            passages: List[Dict[str, str]], metadata_fields, metadata_separator
+        ) -> List[str]:
+            formatted_passages = []
+            for passage in passages:
+                formatted_passage = passage["text"]
+                if metadata_fields is not None:
+                    metadata = metadata_separator.join(
+                        [passage["metadata"].get(field, "") for field in metadata_fields]
+                    )
+                    formatted_passage = (
+                        f"{formatted_passage}{metadata_separator}{metadata}"
+                    )
+                formatted_passages.append(formatted_passage)
+
+            # remove duplicates
+            formatted_passages = list(set(formatted_passages))
+            return formatted_passages
+
+        # remove duplicates and limit the number of passages
+        positives = _get_passages(
+            sample["positive_ctxs"], metadata_fields, metadata_separator
+        )
+
+        # all_positives = _get_passages(
+        #     sample["positive_ctxs"], metadata_fields, metadata_separator
+        # )
+        if shuffle_passages_probability > 0.0:
+            # shuffle the positives with a probability of shuffle_passages_probability
+            if random.random() < shuffle_passages_probability:
+                random.shuffle(positives)
+            random.shuffle(positives)
         if max_positives != -1:
             positives = positives[:max_positives]
-        negatives = list(set([n["text"] for n in sample["negative_ctxs"]]))
+
+        negatives = _get_passages(
+            sample["negative_ctxs"], metadata_fields, metadata_separator
+        )
+        if shuffle_passages_probability > 0.0:
+            # shuffle the negatives with a probability of shuffle_passages_probability
+            if random.random() < shuffle_passages_probability:
+                random.shuffle(negatives)
         if max_negatives != -1:
             negatives = negatives[:max_negatives]
-        hard_negatives = list(set([h["text"] for h in sample["hard_negative_ctxs"]]))
+
+        hard_negatives = _get_passages(
+            sample["hard_negative_ctxs"], metadata_fields, metadata_separator
+        )
+        if shuffle_passages_probability > 0.0:
+            # shuffle the negatives with a probability of shuffle_passages_probability
+            if random.random() < shuffle_passages_probability:
+                random.shuffle(hard_negatives)
         if max_hard_negatives != -1:
             hard_negatives = hard_negatives[:max_hard_negatives]
 
+        # text_pair = sample.get("doc_topic", None)
         question = tokenizer(
-            sample["question"], max_length=max_question_length, truncation=True
+            sample["question"],
+            # text_pair=text_pair,
+            max_length=max_question_length,
+            truncation=True,
         )
 
         passage = positives + negatives + hard_negatives
@@ -505,15 +594,20 @@ class InBatchNegativesDataset(GoldenRetrieverDataset):
             passage = passage[:max_passages]
 
         passage = tokenizer(passage, max_length=max_passage_length, truncation=True)
+        # all_positives = tokenizer(
+        #     all_positives, max_length=max_passage_length, truncation=True
+        # )
 
         # invert the passage data structure from a dict of lists to a list of dicts
         passage = [dict(zip(passage, t)) for t in zip(*passage.values())]
+        # all_positives = [dict(zip(all_positives, t)) for t in zip(*all_positives.values())]
 
         output = dict(
             question=question,
             passage=passage,
             positives=positives,
             positive_pssgs=passage[: len(positives)],
+            # all_positives=all_positives,
         )
         return output
 

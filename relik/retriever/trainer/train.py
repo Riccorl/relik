@@ -994,7 +994,7 @@ def train_hydra(conf: omegaconf.DictConfig) -> None:
 
         try:
             best_pl_module = GoldenRetrieverPLModule.load_from_checkpoint(
-                best_model_path
+                best_model_path, model=pl_module.model
             )
         except Exception as e:
             logger.info(f"Failed to load the model from checkpoint: {e}")

@@ -2,8 +2,8 @@
 
 #!/bin/bash
 #SBATCH --job-name=relik-aida_me5_small_from_blink_01102024            # Job name
-#SBATCH -o /leonardo_work/IscrC_MEL/relik-ml/relik-ric/logs/aida_me5_small_from_blink_01102024/aida_me5_small_from_blink_01102024.out
-#SBATCH -e /leonardo_work/IscrC_MEL/relik-ml/relik-ric/logs/aida_me5_small_from_blink_01102024/aida_me5_small_from_blink_01102024.err
+#SBATCH -o /leonardo_work/IscrC_MEL/relik-ml/relik-ric/logs/aida_me5_small_from_blink_05102024/aida_me5_small_from_blink_01102024.out
+#SBATCH -e /leonardo_work/IscrC_MEL/relik-ml/relik-ric/logs/aida_me5_small_from_blink_05102024/aida_me5_small_from_blink_01102024.err
 
 #SBATCH --nodes=1               # number of nodes
 #SBATCH --ntasks-per-node=1     # number of tasks per node

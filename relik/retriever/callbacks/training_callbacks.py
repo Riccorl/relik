@@ -18,6 +18,7 @@ from relik.retriever.callbacks.prediction_callbacks import (
 )
 from relik.retriever.data.base.datasets import BaseDataset
 from relik.retriever.data.utils import HardNegativesManager
+from relik.retriever.indexers.base import BaseDocumentIndex
 
 logger = get_logger(__name__, level=logging.INFO)
 
@@ -66,11 +67,14 @@ class NegativeAugmentationCallback(GoldenRetrieverPredictionCallback):
         k: int = 100,
         batch_size: int = 32,
         num_workers: int = 0,
+        document_index: BaseDocumentIndex | None = None,
+        precision: str | int = 32,
         force_reindex: bool = False,
         retriever_dir: Optional[Path] = None,
         stages: Sequence[Union[str, RunningStage]] = None,
         other_callbacks: Optional[List[DictConfig]] = None,
         dataset: Optional[Union[DictConfig, BaseDataset]] = None,
+        dataloader: DataLoader | None = None,
         metrics_to_monitor: List[str] = None,
         threshold: float = 0.8,
         max_negatives: int = 5,
@@ -83,11 +87,13 @@ class NegativeAugmentationCallback(GoldenRetrieverPredictionCallback):
             k=k,
             batch_size=batch_size,
             num_workers=num_workers,
+            document_index=document_index,
             force_reindex=force_reindex,
             retriever_dir=retriever_dir,
             stages=stages,
             other_callbacks=other_callbacks,
             dataset=dataset,
+            dataloader=dataloader,
             *args,
             **kwargs,
         )

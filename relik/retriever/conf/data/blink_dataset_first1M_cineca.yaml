@@ -1,13 +1,18 @@
 # train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/blink/window_32_tokens_25032024/train.fixed.jsonl
 train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/blink_32_tokens/first_1M.jsonl
 # train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/blink/window_32_tokens_25032024/train.fixed.first2M.jsonl
-val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/aida_32_tokens_topic/val.jsonl
-test_dataset_path: null
+# val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/aida_32_tokens_topic/val.jsonl
+# test_dataset_path: null
+val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-windows-dpr/en.val.jsonl
+# test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-windows-dpr/en.test.jsonl
+test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-windows-dpr/en.test.jsonl
+
 
 shared_params:
-  documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/documents.jsonl
+  # documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/documents.jsonl
+  documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/documents/wikidata-mewsli-bela.all.pages.3M.jsonl
   max_passage_length: 128
-  passage_batch_size: 400
+  passage_batch_size: 800
   question_batch_size: 256
 
 datamodule:
@@ -23,11 +28,11 @@ datamodule:
       passage_batch_size: ${data.shared_params.passage_batch_size}
       subsample_strategy: random
       subsample_portion: 0.1
-      metadata_fields: ['definition']
-      metadata_separator: ' <def> '
+      # metadata_fields: ['definition']
+      # metadata_separator: ' <def> '
       shuffle: True
-      load_from_cache_file: True
-      prefetch: True
+      load_from_cache_file: False
+      prefetch: False
 
     val:
       - _target_: relik.retriever.data.datasets.InBatchNegativesDataset
@@ -37,7 +42,7 @@ datamodule:
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
         passage_batch_size: ${data.shared_params.passage_batch_size}
-        metadata_fields: ['definition']
+        metadata_fields: ['description']
         metadata_separator: ' <def> '
         load_from_cache_file: True
 
@@ -49,11 +54,11 @@ datamodule:
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
         passage_batch_size: ${data.shared_params.passage_batch_size}
-        metadata_fields: ['definition']
+        metadata_fields: ['description']
         metadata_separator: ' <def> '
         load_from_cache_file: True
 
   num_workers:
-    train: 4
-    val: 4
-    test: 4
+    train: 2
+    val: 2
+    test: 2

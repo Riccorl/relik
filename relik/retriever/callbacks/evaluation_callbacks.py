@@ -91,6 +91,10 @@ class RecallAtKEvaluationCallback(NLPTemplateCallback):
             # compute the mean recall at k
             recall_at_k = hits / total
             metrics[f"recall@{self.k}_{dataloader_idx}"] = recall_at_k
+            if self.verbose:
+                logger.info(
+                    f"Recall@{self.k} on dataloader {dataloader_idx}: {recall_at_k}"
+                )
         metrics[f"recall@{self.k}"] = sum(metrics.values()) / len(metrics)
 
         if self.prefix is not None:

@@ -192,7 +192,6 @@ class GoldenRetriever(torch.nn.Module):
                     for tensor in splitted_passages_encodings
                 ],
                 dtype=concatenated_passages_encodings.dtype,
-                
             )  # Shape: (batch_size, max_num_passages)
 
             # question_encodings = question_encodings.unsqueeze(1)
@@ -261,6 +260,8 @@ class GoldenRetriever(torch.nn.Module):
         force_reindex: bool = False,
         compute_on_cpu: bool = False,
         precision: Optional[Union[str, int]] = None,
+        document_index: BaseDocumentIndex | str | None = None,
+        document_index_kwargs: Optional[Dict] = None,
         *args,
         **kwargs,
     ):
@@ -283,13 +284,22 @@ class GoldenRetriever(torch.nn.Module):
             precision (`Optional[Union[str, int]]`):
                 The precision to use for the model.
         """
-        if self.document_index is None:
+        document_index = document_index or self.document_index
+        if document_index is None:
             raise ValueError(
-                "The retriever must be initialized with an indexer to index "
-                "the passages within the retriever."
+                "The indexer must be provided or set in the retriever before indexing."
             )
+
+        # initialize the indexer if it is not already initialized
+        if isinstance(document_index, str):
+            if document_index_kwargs is None:
+                document_index_kwargs = {}
+            document_index = BaseDocumentIndex.from_pretrained(
+                document_index, **document_index_kwargs
+            )
+
         # TODO: add kwargs
-        return self.document_index.index(
+        return document_index.index(
             retriever=self,
             batch_size=batch_size,
             num_workers=num_workers,
@@ -318,6 +328,8 @@ class GoldenRetriever(torch.nn.Module):
         batch_size: int | None = None,
         num_workers: int = 4,
         progress_bar: bool = False,
+        document_index: BaseDocumentIndex | str | None = None,
+        document_index_kwargs: Optional[Dict] = None,
         **kwargs,
     ) -> List[List[RetrievedSample]]:
         """
@@ -356,10 +368,19 @@ class GoldenRetriever(torch.nn.Module):
         if "top_k" in kwargs:
             k = kwargs.pop("top_k")
 
-        if self.document_index is None:
+        document_index = document_index or self.document_index
+        if document_index is None:
             raise ValueError(
                 "The indexer must be indexed before it can be used within the retriever."
             )
+
+        if isinstance(document_index, str):
+            if document_index_kwargs is None:
+                document_index_kwargs = {}
+            document_index = BaseDocumentIndex.from_pretrained(
+                document_index, **document_index_kwargs
+            )
+
         if text is None and input_ids is None:
             raise ValueError(
                 "Either `text` or `input_ids` must be provided to retrieve the passages."
@@ -406,7 +427,7 @@ class GoldenRetriever(torch.nn.Module):
                 for batch in dataloader:
                     batch = batch.to(self.device)
                     question_encodings = self.question_encoder(**batch).pooler_output
-                    retrieved += self.document_index.search(question_encodings, k)
+                    retrieved += document_index.search(question_encodings, k)
         except AttributeError as e:
             # apparently num_workers > 0 gives some issue on MacOS as of now
             if "mac" in platform.platform().lower():

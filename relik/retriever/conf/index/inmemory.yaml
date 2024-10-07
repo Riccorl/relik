@@ -5,5 +5,5 @@ documents:
 device: "cuda"
 precision: "16"
 metadata_fields:
-  - "definition"
+  - "description"
 separator: " <def> "
