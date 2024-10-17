@@ -3,12 +3,12 @@ hydra:
   run:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: me5-small-semcor # used to name the model in wandb
+model_name: me5-small-semcor-32words-64negs-dualencoder # used to name the model in wandb
 project_name: golden-retriever-wsd-thesis # used to name the project in wandb
 
 defaults:
   - _self_
-  - model: me5-small
+  - model: me5_small
   - index: inmemory
   - loss: nce_loss
   - optimizer: radamw
@@ -99,8 +99,8 @@ train:
       metrics_to_monitor:
         validate_recall@${train.top_k}
         # - sanity_check_recall@${train.top_k}
-      threshold: 0.0
-      max_negatives: 15
+      threshold: 0.85
+      max_negatives: 2
       add_with_probability: 0.5
       refresh_every_n_epochs: 1
       other_callbacks:

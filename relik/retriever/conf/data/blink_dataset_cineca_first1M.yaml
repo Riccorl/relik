@@ -12,7 +12,7 @@ shared_params:
   # documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/documents.jsonl
   documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/documents/wikidata-mewsli-bela.all.pages.3M.jsonl
   max_passage_length: 128
-  passage_batch_size: 800
+  passage_batch_size: 400
   question_batch_size: 256
 
 datamodule:

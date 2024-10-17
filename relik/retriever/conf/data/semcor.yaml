@@ -1,11 +1,11 @@
-train_dataset_path: /media/data/relik/data/wsd/relik-defs/semcor.windows.dpr.jsonl
-val_dataset_path: /media/data/relik/data/wsd/relik-defs/semeval2007.windows.dpr.jsonl
-test_dataset_path: /media/data/relik/data/wsd/relik-defs/all.windows.dpr.jsonl
+train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/wsd/relik-defs/semcor.windows.16.dpr.jsonl
+val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/wsd/relik-defs/semeval2007.windows.16.dpr.jsonl
+test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/wsd/relik-defs/all.windows.16.dpr.jsonl
 
 shared_params:
-  documents_path: /media/data/relik/data/wsd/documents/wordnet.jsonl
-  max_passage_length: 128
-  passage_batch_size: 400
+  documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/wsd/documents/wordnet.jsonl
+  max_passage_length: 256
+  passage_batch_size: 64
   question_batch_size: 256
   use_topics: False
 
@@ -22,7 +22,7 @@ datamodule:
       passage_batch_size: ${data.shared_params.passage_batch_size}
       subsample_strategy: null
       subsample_portion: 0.1
-      # shuffle: True
+      shuffle: True
       # metadata_fields: ["definition"]
       # metadata_separator: " <def> "
       # use_topics: ${data.shared_params.use_topics}

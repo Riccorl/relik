@@ -1,5 +1,6 @@
 # language_model: "intfloat/multilingual-e5-small"
-language_model: "/leonardo_work/IscrC_MEL/hf_cache/riccorl/me5-small-blink-first2M-encoder"
+# language_model: "/leonardo_work/IscrC_MEL/hf_cache/riccorl/me5-small-blink-first2M-encoder"
+language_model: "/leonardo_work/IscrC_MEL/relik-ml/relik-ric/wandb/offline-run-20241006_162733-hurviz7u/files/retriever/question_encoder"
 
 pl_module:
   _target_: relik.retriever.lightning_modules.pl_modules.GoldenRetrieverPLModule

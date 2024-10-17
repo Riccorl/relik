@@ -2,8 +2,8 @@
 
 #!/bin/bash
 #SBATCH --job-name=relik-aida_me5_small_from_blink_01102024            # Job name
-#SBATCH -o /leonardo_work/IscrC_MEL/relik-ml/relik-ric/logs/aida_me5_small_from_blink_05102024/aida_me5_small_from_blink_01102024.out
-#SBATCH -e /leonardo_work/IscrC_MEL/relik-ml/relik-ric/logs/aida_me5_small_from_blink_05102024/aida_me5_small_from_blink_01102024.err
+#SBATCH -o /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/aida_me5_small_from_blink_05102024/aida_me5_small_from_blink_01102024.out
+#SBATCH -e /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/aida_me5_small_from_blink_05102024/aida_me5_small_from_blink_01102024.err
 
 #SBATCH --nodes=1               # number of nodes
 #SBATCH --ntasks-per-node=1     # number of tasks per node
@@ -13,7 +13,6 @@
 
 #SBATCH -A IscrC_MEL
 #SBATCH -p boost_usr_prod #lrd_all_serial
-
 
 # MODULES="cuda/12.1"
 
@@ -31,5 +30,5 @@ export HF_TOKEN=$(python -c "import huggingface_hub; print(huggingface_hub.HfFol
 # export NVSHMEM_IB_SL=1
 # export NVSHMEM_DISABLE_NCCL=1
 
-# HYDRA_FULL_ERROR=1 relik retriever train /leonardo_work/IscrC_MEL/relik-ml/relik-ric/relik/retriever/conf/blink_me5_small.yaml
-HYDRA_FULL_ERROR=1 relik retriever train /leonardo_work/IscrC_MEL/relik-ml/relik-ric/relik/retriever/conf/aida_me5_small_from_blink.yaml
+# HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/blink_me5_small.yaml
+HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/aida_me5_small_from_blink.yaml

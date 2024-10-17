@@ -1,6 +1,7 @@
 from copy import deepcopy
 import os
 from pathlib import Path
+import sys
 from typing import List, Literal, Optional, Union
 
 import hydra
@@ -766,6 +767,7 @@ class RetrieverTrainer:
 
 
 def train(conf: omegaconf.DictConfig) -> None:
+
     logger.info("Starting training with config:")
     logger.info(pformat(OmegaConf.to_container(conf)))
 
@@ -815,6 +817,11 @@ def main(conf: omegaconf.DictConfig):
 
 def train_hydra(conf: omegaconf.DictConfig) -> None:
     # reproducibility
+
+    exp_dir_by_hydra = Path(hydra.utils.get_original_cwd())
+    print("Exp dir by hydra", exp_dir_by_hydra)
+    sys.exit()
+    
     pl.seed_everything(conf.train.seed)
     torch.set_float32_matmul_precision(conf.train.float32_matmul_precision)
 
@@ -927,6 +934,7 @@ def train_hydra(conf: omegaconf.DictConfig) -> None:
     experiment_path: Optional[Path] = None
     if conf.logging.log:
         logger.info("Instantiating Wandb Logger")
+        # get running dir from hydra
         experiment_logger = hydra.utils.instantiate(conf.logging.wandb_arg)
         if pl_module is not None:
             # it may happen that the model is not instantiated if we are only testing
@@ -935,7 +943,7 @@ def train_hydra(conf: omegaconf.DictConfig) -> None:
         experiment_path = Path(experiment_logger.experiment.dir)
         # Store the YaML config separately into the wandb dir
         yaml_conf: str = OmegaConf.to_yaml(cfg=conf)
-        (experiment_path / "hparams.yaml").write_text(yaml_conf)
+        (experiment_path / "training_conf.yaml").write_text(yaml_conf)
         # Add a Learning Rate Monitor callback to log the learning rate
         callbacks_store.append(LearningRateMonitor(logging_interval="step"))
 

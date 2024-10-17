@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #!/bin/bash
-#SBATCH --job-name=relik-me5-small-blink-eng-first2M-random-mewsli            # Job name
-#SBATCH -o /leonardo_work/IscrC_MEL/relik-ml/relik-ric/logs/me5-small-blink-eng-first2M-random-mewsli-06102024/train.out
-#SBATCH -e /leonardo_work/IscrC_MEL/relik-ml/relik-ric/logs/me5-small-blink-eng-first2M-random-mewsli-06102024/train.err
+#SBATCH --job-name=relik-me5-base-blink-eng-first1M-random-mewsli            # Job name
+#SBATCH -o /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/me5-base-blink-eng-first1M-random-mewsli-10102024/train.out
+#SBATCH -e /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/me5-base-blink-eng-first1M-random-mewsli-10102024/train.err
 
 #SBATCH --nodes=1               # number of nodes
 #SBATCH --ntasks-per-node=1     # number of tasks per node
@@ -13,7 +13,6 @@
 
 #SBATCH -A IscrC_MEL
 #SBATCH -p boost_usr_prod #lrd_all_serial
-
 
 # MODULES="cuda/12.1"
 
@@ -31,6 +30,7 @@ export HF_TOKEN=$(python -c "import huggingface_hub; print(huggingface_hub.HfFol
 # export NVSHMEM_IB_SL=1
 # export NVSHMEM_DISABLE_NCCL=1
 
-HYDRA_FULL_ERROR=1 relik retriever train /leonardo_work/IscrC_MEL/relik-ml/relik-ric/relik/retriever/conf/blink_me5_small_first2M.yaml
-# HYDRA_FULL_ERROR=1 relik retriever train /leonardo_work/IscrC_MEL/relik-ml/relik-ric/relik/retriever/conf/blink_me5_small_first1M.yaml
-# HYDRA_FULL_ERROR=1 relik retriever train /leonardo_work/IscrC_MEL/relik-ml/relik-ric/relik/retriever/conf/mewsli_en_me5_small_from_blink.yaml
+# HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/blink_me5_small_first2M.yaml
+HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/blink_me5_base_first2M.yaml
+# HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/blink_me5_small_first1M.yaml
+# HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/mewsli_en_me5_small_from_blink.yaml

@@ -3,17 +3,17 @@ hydra:
   run:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: me5-small-mewsli-all-from-blink-first2M-50k-v2 # used to name the model in wandb
-project_name: golden-retriever-mel-thesis # used to name the project in wandb
+model_name: me5-base-semcor-16words-64negs-dualencoder # used to name the model in wandb
+project_name: golden-retriever-wsd-thesis # used to name the project in wandb
 
 defaults:
   - _self_
-  - model: me5-small-blink-first2M-encoder
-  - index: inmemory_mewsli
+  - model: me5_base
+  - index: inmemory
   - loss: nce_loss
   - optimizer: radamw
   - scheduler: linear_scheduler
-  - data: mewsli_all_dataset
+  - data: semcor
   - logging: wandb_logging
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
@@ -57,7 +57,7 @@ train:
     _target_: lightning.pytorch.callbacks.EarlyStopping
     monitor: validate_recall@${train.top_k}
     mode: max
-    patience: 3
+    patience: 5
 
   model_checkpoint_callback:
     _target_: lightning.pytorch.callbacks.ModelCheckpoint
@@ -99,8 +99,8 @@ train:
       metrics_to_monitor:
         validate_recall@${train.top_k}
         # - sanity_check_recall@${train.top_k}
-      threshold: 0.0
-      max_negatives: 20
+      threshold: 0.70
+      max_negatives: 4
       add_with_probability: 1.0
       refresh_every_n_epochs: 1
       other_callbacks:

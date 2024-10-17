@@ -1,9 +1,7 @@
 #!/bin/bash
-
-#!/bin/bash
-#SBATCH --job-name=relik-mewsli_all_me5_small_from_blink            # Job name
-#SBATCH -o /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/mewsli_all_me5_small_from_blink-v2-08102024/train.out
-#SBATCH -e /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/mewsli_all_me5_small_from_blink-v2-08102024/train.err
+#SBATCH --job-name=semcore_wsd-base           # Job name
+#SBATCH -o /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/semcor_me5_base-10102024/train.out
+#SBATCH -e /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/semcor_me5_base-10102024/train.err
 
 #SBATCH --nodes=1               # number of nodes
 #SBATCH --ntasks-per-node=1     # number of tasks per node
@@ -30,4 +28,6 @@ export HF_TOKEN=$(python -c "import huggingface_hub; print(huggingface_hub.HfFol
 # export NVSHMEM_IB_SL=1
 # export NVSHMEM_DISABLE_NCCL=1
 
-HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/mewsli_all_me5_small_from_blink.yaml
+# HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/semcore_wsd.yaml
+# HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/semcore_wsd_from_blink.yaml
+HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/semcore_wsd_base.yaml

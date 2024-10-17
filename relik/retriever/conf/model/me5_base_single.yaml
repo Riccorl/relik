@@ -1,12 +1,11 @@
-# language_model: "intfloat/multilingual-e5-small"
-language_model: "/leonardo_work/IscrC_MEL/hf_cache/multilingual-e5-small"
+# language_model: "intfloat/multilingual-e5-base"
+language_model: "/leonardo_work/IscrC_MEL/hf_cache/multilingual-e5-base"
 
 pl_module:
   _target_: relik.retriever.lightning_modules.pl_modules.GoldenRetrieverPLModule
   model:
     _target_: relik.retriever.pytorch_modules.model.GoldenRetriever
     question_encoder: ${model.language_model}
-    passage_encoder: ${model.language_model}
     document_index: ${index}
     loss_type: ${loss}
   optimizer: ${optimizer}
