@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #!/bin/bash
-#SBATCH --job-name=relik-mewsli_all_me5_base_from_wikipedia            # Job name
-#SBATCH -o /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/me5-base-all-from-wikipedia-fix-jp-lr1e-5-21102024/train.out
-#SBATCH -e /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/me5-base-all-from-wikipedia-fix-jp-lr1e-5-21102024/train.err
+#SBATCH --job-name=me5-base-dual-wikipedia-inorder-nohn-mewsli3Meval            # Job name
+#SBATCH -o /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/me5-base-dual-wikipedia-inorder-nohn-mewsli3Meval-17102024/train.out
+#SBATCH -e /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/logs/me5-base-dual-wikipedia-inorder-nohn-mewsli3Meval-17102024/train.err
 
 #SBATCH --nodes=1               # number of nodes
 #SBATCH --ntasks-per-node=1     # number of tasks per node
@@ -30,4 +30,4 @@ export HF_TOKEN=$(python -c "import huggingface_hub; print(huggingface_hub.HfFol
 # export NVSHMEM_IB_SL=1
 # export NVSHMEM_DISABLE_NCCL=1
 
-HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/mewsli_all_me5_base_from_wikipedia.yaml
+HYDRA_FULL_ERROR=1 relik retriever train /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/relik/retriever/conf/wikipedia_me5_base_dual.yaml

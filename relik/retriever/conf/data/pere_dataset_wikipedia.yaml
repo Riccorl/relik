@@ -1,19 +1,12 @@
-# train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/blink/window_32_tokens_25032024/train.fixed.jsonl
-train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/blink_32_tokens/first_1M.jsonl
-# train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/blink/window_32_tokens_25032024/train.fixed.first2M.jsonl
-# val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/aida_32_tokens_topic/val.jsonl
-# test_dataset_path: null
+train_dataset_path: /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/data/thesis/ml-el/data/wikipedia-relik-windows-dpr/retriever-random-sample/all.dpr.wikidata.jsonl
 val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-windows-dpr/en.val.jsonl
-# test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-windows-dpr/en.test.jsonl
 test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-windows-dpr/en.test.jsonl
 
-
 shared_params:
-  # documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/relik-paper/retriever/el/documents.jsonl
   documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/documents/wikidata-mewsli-bela.all.pages.3M.jsonl
   max_question_length: 256
-  max_passage_length: 256
-  question_batch_size: 256
+  max_passage_length: 64
+  question_batch_size: 128
   passage_batch_size: 400
 
 datamodule:
@@ -29,10 +22,10 @@ datamodule:
       passage_batch_size: ${data.shared_params.passage_batch_size}
       subsample_strategy: in_order
       subsample_portion: 0.1
-      # metadata_fields: ['definition']
-      # metadata_separator: ' <def> '
+      metadata_fields: ["definition"]
+      metadata_separator: " <def> "
       shuffle: True
-      load_from_cache_file: False
+      load_from_cache_file: True
       prefetch: False
 
     val:
@@ -43,8 +36,8 @@ datamodule:
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
         passage_batch_size: ${data.shared_params.passage_batch_size}
-        metadata_fields: ['description']
-        metadata_separator: ' <def> '
+        metadata_fields: ["description"]
+        metadata_separator: " <def> "
         load_from_cache_file: True
 
     test:
@@ -55,8 +48,8 @@ datamodule:
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
         passage_batch_size: ${data.shared_params.passage_batch_size}
-        metadata_fields: ['description']
-        metadata_separator: ' <def> '
+        metadata_fields: ["description"]
+        metadata_separator: " <def> "
         load_from_cache_file: True
 
   num_workers:

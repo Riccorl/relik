@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
+import hydra
 import lightning as pl
 import torch
 from lightning.pytorch.trainer.states import RunningStage
@@ -233,7 +234,8 @@ class SaveRetrieverCallback(pl.Callback):
             retriever_folder = Path(self.saving_dir)
         else:
             try:
-                retriever_folder = Path(trainer.logger.experiment.dir) / "retriever"
+                # retriever_folder = Path(trainer.logger.experiment.dir) / "retriever"
+                retriever_folder = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir) / "retriever"
             except Exception:
                 logger.info(
                     "You need to specify an output directory (`saving_dir`) or a logger to save the "

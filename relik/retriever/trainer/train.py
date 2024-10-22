@@ -817,11 +817,6 @@ def main(conf: omegaconf.DictConfig):
 
 def train_hydra(conf: omegaconf.DictConfig) -> None:
     # reproducibility
-
-    exp_dir_by_hydra = Path(hydra.utils.get_original_cwd())
-    print("Exp dir by hydra", exp_dir_by_hydra)
-    sys.exit()
-    
     pl.seed_everything(conf.train.seed)
     torch.set_float32_matmul_precision(conf.train.float32_matmul_precision)
 
@@ -932,10 +927,16 @@ def train_hydra(conf: omegaconf.DictConfig) -> None:
 
     experiment_logger: Optional[WandbLogger] = None
     experiment_path: Optional[Path] = None
+    hydra_expertiment_path = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
     if conf.logging.log:
         logger.info("Instantiating Wandb Logger")
-        # get running dir from hydra
-        experiment_logger = hydra.utils.instantiate(conf.logging.wandb_arg)
+        try:
+            # wandb_save_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
+            # update the save dir to the one from Hydra
+            experiment_logger = hydra.utils.instantiate(conf.logging.wandb_arg, save_dir=hydra_expertiment_path)
+        except AttributeError:
+            logger.warning("Could not get the output directory from Hydra, using default Wandb save directory")
+            experiment_logger = hydra.utils.instantiate(conf.logging.wandb_arg)
         if pl_module is not None:
             # it may happen that the model is not instantiated if we are only testing
             # in that case, we don't need to watch the model
@@ -958,7 +959,7 @@ def train_hydra(conf: omegaconf.DictConfig) -> None:
     if conf.train.model_checkpoint_callback is not None:
         model_checkpoint_callback = hydra.utils.instantiate(
             conf.train.model_checkpoint_callback,
-            dirpath=experiment_path / "checkpoints" if experiment_path else None,
+            dirpath=hydra_expertiment_path / "checkpoints" if hydra_expertiment_path else None,
         )
         callbacks_store.append(model_checkpoint_callback)
 
