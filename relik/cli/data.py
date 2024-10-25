@@ -76,7 +76,7 @@ def create_windows(
         keys_to_keep,
     ):
         # build a doc_id to doc mapping
-        doc_id_to_doc = {int(document["doc_id"]): document for document in data}
+        doc_id_to_doc = {document["doc_id"]: document for document in data}
         if is_split_into_words:
             text_field = "doc_words"
         else:
@@ -87,7 +87,7 @@ def create_windows(
             window_size,
             window_stride,
             is_split_into_words=is_split_into_words,
-            doc_ids=[int(document["doc_id"]) for document in data],
+            doc_ids=[document["doc_id"] for document in data],
             # doc_topic=doc_topic,
         )
 
@@ -214,16 +214,34 @@ def create_windows(
                     window_token_end = window._d["char2token_end"][
                         str(window.offset + len(window.text))
                     ]
+                    
                     if (
                         start_token >= window_token_start
                         and end_token <= window_token_end
                     ):
-                        window_level_labels_but_for_tokens.append(doc_level_label)
+                        window_level_labels_but_for_tokens.append([start_token - window.token_offset, end_token - window.token_offset, label_text])
                 window._d["window_labels_tokens"] = window_level_labels_but_for_tokens
                 # if the text is split into words, we need to map the labels to the characters
                 for label in window_level_labels_but_for_tokens:
                     start_token, end_token, label_text = label
-                    start_char = window._d["token2char_start"][str(start_token)]
+                    try:
+                        start_char = window._d["token2char_start"][str(start_token)]
+                    except:
+                        print("window_level_labels_but_for_tokens", window_level_labels_but_for_tokens)
+                        print(start_token)
+                        print(start_token - window.token_offset)
+                        print(window._d["token2char_start"])
+                        print(doc_text[start_token: end_token])
+                        print(window.words[start_token - window.token_offset: end_token - window.token_offset])
+                    #     print(window._d["doc_id"])
+                    #     print(window_token_start)
+                    #     print(window_token_end)
+                    #     print(window_level_labels_but_for_tokens)
+                    #     print(window._d["token2char_start"])
+                    #     print(window._d["token2char_start"][str(start_token - window_token_start)])
+                    #     print(doc_text[start_token: end_token])
+                    #     print(window.text[window._d["token2char_start"][str(start_token - window_token_start)]])
+                    #     a
                     end_char = window._d["token2char_end"][str(end_token - 1)]
                     window_level_labels.append([start_char, end_char, label_text])
                 window._d["window_labels"] = window_level_labels

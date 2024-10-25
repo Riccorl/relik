@@ -10,6 +10,8 @@ pretrained_configs
 lightning_logs
 hf_weights
 logs
+pyrightconfig.json
+.zed
 
 # Created by https://www.toptal.com/developers/gitignore/api/jetbrains+all,vscode,python,jupyternotebooks,linux,windows,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=jetbrains+all,vscode,python,jupyternotebooks,linux,windows,macos

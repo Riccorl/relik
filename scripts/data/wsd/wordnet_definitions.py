@@ -13,7 +13,7 @@ def get_index(output_file: str):
 
     documents = []
     for i, synset in enumerate(wn.all_synsets()):
-        lemmas = [lemma.name() for lemma in synset.lemmas()]
+        lemmas = [lemma.name().replace("_", " ") for lemma in synset.lemmas()]
         doc = Document(
             id=i,
             text=f"{', '.join(lemmas)}: {synset.definition()}",

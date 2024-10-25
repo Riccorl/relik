@@ -33,7 +33,7 @@ def compute_retriever_stats(dataset, top_k) -> None:
             total += 1
 
     recall = correct / total
-    logger.info(f"Recall@{top_k}: {recall}")
+    return recall
 
 def compute_retriever_stats_triplets(dataset, top_k) -> None:
     correct, total = 0, 0
@@ -50,14 +50,13 @@ def compute_retriever_stats_triplets(dataset, top_k) -> None:
             total += 1
 
     recall = correct / total
-    logger.info(f"Recall@{top_k}: {recall}")
+    return recall
 
 @torch.no_grad()
-def add_candidates(
+def compute(
     question_encoder_name_or_path: Union[str, os.PathLike],
     document_name_or_path: Union[str, os.PathLike],
-    input_path: Union[str, os.PathLike],
-    output_path: Union[str, os.PathLike],
+    input_paths: Union[str, os.PathLike],
     passage_encoder_name_or_path: Optional[Union[str, os.PathLike]] = None,
     relations: bool = False,
     top_k: int = 100,
@@ -68,7 +67,6 @@ def add_candidates(
     precision: str = "fp32",
     use_doc_topics: bool = False,
     log_recall: bool = True,
-    save_whole_docs: bool = False,
 ):
     retriever = GoldenRetriever(
         question_encoder=question_encoder_name_or_path,
@@ -79,21 +77,20 @@ def add_candidates(
         index_precision=precision,
     )
     retriever.eval()
+    tokenizer = retriever.question_tokenizer
 
-    logger.info(f"Loading from {input_path}")
-    with open(input_path) as f:
-        samples = [json.loads(line) for line in f.readlines()]
+    scores = {}
 
-    if use_doc_topics and "doc_topic" not in samples[0]:
-        raise ValueError("Dataset does not contain topics, but --use-doc-topics was passed")
-    use_doc_topics = use_doc_topics and "doc_topic" in samples[0]
+    input_paths = [Path(p) for p in input_paths]
+    for input_path in input_paths:
 
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Loading from {input_path}")
+        with open(input_path) as f:
+            samples = [json.loads(line) for line in f.readlines()]
 
-    with open(output_path, "w") as f_out:
-        # get tokenizer
-        tokenizer = retriever.question_tokenizer
+        if use_doc_topics and "doc_topic" not in samples[0]:
+            raise ValueError("Dataset does not contain topics, but --use-doc-topics was passed")
+        use_doc_topics = use_doc_topics and "doc_topic" in samples[0]
 
         def collate_fn(batch):
             return ModelInputs(
@@ -116,11 +113,11 @@ def add_candidates(
             collate_fn=collate_fn,
         )
 
-        # we also dump the candidates to a file after a while
+        output_data = []
+
         retrieved_accumulator = []
         with torch.inference_mode():
             num_completed_docs = 0
-
             start = time.time()
             for documents_batch in tqdm.tqdm(dataloader):
                 retrieve_kwargs = {
@@ -132,7 +129,6 @@ def add_candidates(
                 retrieved_accumulator.extend(batch_out)
 
                 if len(retrieved_accumulator) % 300_000 == 0:
-                    output_data = []
                     # get the correct document from the original dataset
                     # the dataloader is not shuffled, so we can just count the number of
                     # documents we have seen so far
@@ -158,18 +154,13 @@ def add_candidates(
                             sample["span_candidates_scores"] = [
                                 c.score for c in retrieved
                             ]
-                        if save_whole_docs:
-                            sample["retrieved_docs"] = retrieved
                         output_data.append(sample)
-
-                    for sample in output_data:
-                        f_out.write(json.dumps(sample) + "\n")
 
                     num_completed_docs += len(retrieved_accumulator)
                     retrieved_accumulator = []
 
             if len(retrieved_accumulator) > 0:
-                output_data = []
+                # output_data = []
                 # get the correct document from the original dataset
                 # the dataloader is not shuffled, so we can just count the number of
                 # documents we have seen so far
@@ -193,12 +184,7 @@ def add_candidates(
                         sample["span_candidates"] = candidate_titles
                         # sample["window_candidates"] = candidate_titles
                         sample["span_candidates_scores"] = [c.score for c in retrieved]
-                    if save_whole_docs:
-                            sample["retrieved_docs"] = [c.document.to_dict() for c in retrieved]
                     output_data.append(sample)
-
-                for sample in output_data:
-                    f_out.write(json.dumps(sample) + "\n")
 
                 num_completed_docs += len(retrieved_accumulator)
                 retrieved_accumulator = []
@@ -206,13 +192,20 @@ def add_candidates(
             end = time.time()
             logger.info(f"Retrieval took {end - start} seconds")
 
-    if log_recall:
-        with open(output_path) as f:
-            annotated_samples = [json.loads(line) for line in f.readlines()]
         if relations:
-            compute_retriever_stats_triplets(annotated_samples, top_k)
+            recall = compute_retriever_stats_triplets(output_data, top_k)
         else:
-            compute_retriever_stats(annotated_samples, top_k)
+            recall = compute_retriever_stats(output_data, top_k)
+            logger.info(f"Recall@{top_k} for {input_path}: {recall}")
+        scores[input_path] = recall
+    
+    for input_path, recall in scores.items():
+        logger.info(f"Recall@{top_k} for {input_path}: {recall}")
+    
+    google_sheet_line = ""
+    for input_path, recall in scores.items():
+        google_sheet_line += f"{recall:.4f};"
+    logger.info(google_sheet_line)
 
 
 if __name__ == "__main__":
@@ -220,8 +213,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("--question-encoder-name-or-path", type=str, required=True)
     arg_parser.add_argument("--document-name-or-path", type=str, required=True)
     arg_parser.add_argument("--passage-encoder-name-or-path", type=str)
-    arg_parser.add_argument("--input-path", type=str, required=True)
-    arg_parser.add_argument("--output-path", type=str, required=True)
+    arg_parser.add_argument("--input-paths", type=str, required=True, nargs="+")
     arg_parser.add_argument("--relations", action="store_true")
     arg_parser.add_argument("--top-k", type=int, default=100)
     arg_parser.add_argument("--batch-size", type=int, default=128)
@@ -230,7 +222,5 @@ if __name__ == "__main__":
     arg_parser.add_argument("--precision", type=str, default="fp32")
     arg_parser.add_argument("--use-doc-topics", action="store_true")
     arg_parser.add_argument("--num-workers", type=int, default=4)
-    arg_parser.add_argument("--log-recall", action="store_true")
-    arg_parser.add_argument("--save-whole-docs", action="store_true")
 
-    add_candidates(**vars(arg_parser.parse_args()))
+    compute(**vars(arg_parser.parse_args()))
