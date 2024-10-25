@@ -3,7 +3,7 @@ hydra:
   run:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: me5-base-wikipedia-inorder-nohn-mewsli3Meval # used to name the model in wandb
+model_name: me5-base-wikipedia-inorder-nohn-mewsli3Meval-continue-alleval # used to name the model in wandb
 project_name: golden-retriever-mel-thesis # used to name the project in wandb
 
 defaults:
@@ -27,7 +27,7 @@ train:
   # if true, only test the model
   only_test: False
   # if provided, initialize the model with the weights from the checkpoint
-  pretrain_ckpt_path: null
+  pretrain_ckpt_path: /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/relik-ric/experiments/me5-base-wikipedia-inorder-nohn-mewsli3Meval/2024-10-18/09-12-17/checkpoints/last.ckpt
   # if provided, start training from the checkpoint
   checkpoint_path: null
 
@@ -46,7 +46,7 @@ train:
     val_check_interval: 1.0 # you can specify an int "n" here => validation every "n" steps
     check_val_every_n_epoch: 1
     max_epochs: 0
-    max_steps: 250_000
+    max_steps: 500_000
     deterministic: True
     fast_dev_run: False
     precision: 16

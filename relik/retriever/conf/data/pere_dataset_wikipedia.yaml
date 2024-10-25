@@ -1,12 +1,12 @@
 train_dataset_path: /leonardo_scratch/fast/IscrC_TIGeR/relik-ml/data/thesis/ml-el/data/wikipedia-relik-windows-dpr/retriever-random-sample/all.dpr.wikidata.jsonl
-val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-windows-dpr/en.val.jsonl
-test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-windows-dpr/en.test.jsonl
+val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-specialized-tokenizer-windows-dpr/all.val.jsonl
+test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-specialized-tokenizer-windows-dpr/all.test.jsonl
 
 shared_params:
   documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/documents/wikidata-mewsli-bela.all.pages.3M.jsonl
   max_question_length: 256
-  max_passage_length: 64
-  question_batch_size: 128
+  max_passage_length: 128
+  question_batch_size: 256
   passage_batch_size: 400
 
 datamodule:

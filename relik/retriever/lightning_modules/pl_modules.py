@@ -40,14 +40,24 @@ class GoldenRetrieverPLModule(pl.LightningModule):
         return self.model(**kwargs)
 
     def training_step(self, batch: ModelInputs, batch_idx: int) -> torch.Tensor:
-        forward_output = self.forward(**batch, return_loss=True)
-        self.log(
-            "loss",
-            forward_output["loss"],
-            batch_size=batch["questions"]["input_ids"].size(0),
-            prog_bar=True,
-        )
-        return forward_output["loss"]
+        # check OOM and skip if broken
+        try:
+            forward_output = self.forward(**batch, return_loss=True)
+            self.log(
+                "loss",
+                forward_output["loss"],
+                batch_size=batch["questions"]["input_ids"].size(0),
+                prog_bar=True,
+            )
+            return forward_output["loss"]
+        except RuntimeError as e:
+            if "CUDA out of memory" in str(e):
+                self.log("OOM", 1)
+                torch.cuda.empty_cache()
+                return None
+            else:
+                raise e
+
 
     def validation_step(self, batch: ModelInputs, batch_idx: int) -> None:
         forward_output = self.forward(**batch, return_loss=True)

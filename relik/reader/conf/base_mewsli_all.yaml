@@ -1,0 +1,16 @@
+# Required to make the "experiments" dir the default one for the output of the models
+hydra:
+  job:
+    chdir: True
+  run:
+    dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+model_name: mdeberta-base-mewsli-all-lrd08-1x8192-en-eval-400000-continuefromepoch5
+project_name: relik-reader-mel-thesis # used to name the project in wandb
+offline: false  # if true, wandb will not be used
+
+defaults:
+  - _self_
+  - training: mewsli
+  - model: mewsli_base
+  - data: mewsli

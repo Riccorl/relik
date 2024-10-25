@@ -1,6 +1,6 @@
 train_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-specialized-tokenizer-windows-dpr/all.train.jsonl
-val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-specialized-tokenizer-windows-dpr/en.val.jsonl
-test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-specialized-tokenizer-windows-dpr/en.test.jsonl
+val_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-specialized-tokenizer-windows-dpr/all.val.jsonl
+test_dataset_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/data/mewsli-9-relik-entities-pages-specialized-tokenizer-windows-dpr/all.test.jsonl
 
 shared_params:
   documents_path: /leonardo_work/IscrC_MEL/relik-ml/data/thesis/ml-el/documents/wikidata-mewsli-bela.all.pages.3M.jsonl

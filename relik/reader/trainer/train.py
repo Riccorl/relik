@@ -53,6 +53,8 @@ def train(cfg: DictConfig) -> None:
 
     model.set_optimizer_factory(electra_optimizer_factory)
 
+    hydra_expertiment_path = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
+
     # datasets declaration
     train_dataset: RelikDataset = hydra.utils.instantiate(
         cfg.data.train_dataset,
@@ -95,7 +97,7 @@ def train(cfg: DictConfig) -> None:
         )
 
     wandb_logger = WandbLogger(
-        cfg.model_name, project=cfg.project_name, offline=cfg.offline
+        cfg.model_name, project=cfg.project_name, offline=cfg.offline, save_dir=hydra_expertiment_path
     )
 
     # trainer declaration
@@ -110,8 +112,13 @@ def train(cfg: DictConfig) -> None:
     # Trainer fit
     trainer.fit(
         model=model,
-        train_dataloaders=DataLoader(train_dataset, batch_size=None, num_workers=0),
-        val_dataloaders=DataLoader(val_dataset, batch_size=None, num_workers=0),
+        train_dataloaders=DataLoader(train_dataset, batch_size=None, num_workers=4),
+        val_dataloaders=DataLoader(val_dataset, batch_size=None, num_workers=4),
+        ckpt_path=(
+            cfg.training.ckpt_path
+            if "ckpt_path" in cfg.training and cfg.training.ckpt_path
+            else None
+        ),
     )
 
     # if cfg.training.save_model_path:

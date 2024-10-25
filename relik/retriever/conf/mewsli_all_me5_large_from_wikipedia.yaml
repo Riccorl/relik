@@ -3,12 +3,12 @@ hydra:
   run:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: me5-base-mewsli-all-from-wikipedia-fix-jp-lr1e-5-alleval # used to name the model in wandb
+model_name: me5-large-mewsli-all-from-wikipedia # used to name the model in wandb
 project_name: golden-retriever-mel-thesis # used to name the project in wandb
 
 defaults:
   - _self_
-  - model: me5_base_from_wikipedia
+  - model: me5_large_from_wikipedia
   - index: inmemory_mewsli
   - loss: nce_loss
   - optimizer: radamw
