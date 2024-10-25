@@ -7,7 +7,12 @@ import sys
 from tqdm import tqdm
 
 
-def parse_documents(input_file: str, output_file: str, force_ids_path: str = None):
+def parse_documents(
+    input_file: str,
+    output_file: str,
+    force_ids_path: str = None,
+    prefer_pages: bool = False,
+):
     output_file = Path(output_file)
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -35,52 +40,23 @@ def parse_documents(input_file: str, output_file: str, force_ids_path: str = Non
             titles = doc["labels"]
             if len(titles) == 0:
                 if doc["id"] in ids:
-                    # print(f"Document {i} has no titles but is in the ids list.")
-                    # print(doc)
-                    # sys.exit(1)
                     totally_missing += 1
                     continue
-                # print(f"Document {i} has no titles.")
-                # print(doc)
-                # sys.exit(1)
                 empty_titles += 1
                 continue
 
+            chosen_title_is_en = False
             if "en" in titles:
+                chosen_title_is_en = True
                 chosen_title = titles["en"]
             else:
-                # if len(titles) != 0:
                 chosen_title = random.choice(list(titles.values()))
                 random_title_count += 1
-                # else:
-                #     skipped += 1
-                #     continue
-            # else:
-            # skipped += 1
-            # continue
-
-            # descriptions = doc["descriptions"]
-            # if override_language in descriptions:
-            #     chosen_description = descriptions[override_language]
-            # else:
-            #     chosen_description = ""
-            # metadata["description"] = chosen_description
+            metadata["title"] = chosen_title
 
             descriptions = doc["descriptions"]
             if "en" in descriptions:
                 chosen_description = descriptions["en"]
-            # elif doc["id"] in ids:
-            #     if len(descriptions) == 0:
-            #         chosen_description = ""
-            #     elif "en" in descriptions:
-            #         chosen_description = descriptions["en"]
-            #         # override_language = "en"
-            #     else:
-            #         # pick a random language from the descriptions
-            #         random_language = random.choice(list(descriptions.keys()))
-            #         chosen_description = descriptions[random_language]
-            #         random_description_count += 1
-            #         # override_language = random_language
             else:
                 if len(descriptions) != 0:
                     chosen_description = random.choice(list(descriptions.values()))
@@ -99,8 +75,16 @@ def parse_documents(input_file: str, output_file: str, force_ids_path: str = Non
             if "en" in pages:
                 chosen_page = pages["en"]
             else:
-                chosen_page = ""
+                # if chosen_title_is_en:
+                #     chosen_page = chosen_title
+                if len(pages) != 0:
+                    chosen_page = random.choice(list(pages.values()))
+                else:
+                    chosen_page = ""
             metadata["page"] = chosen_page
+
+            if prefer_pages and chosen_page:
+                chosen_title = chosen_page
 
             parsed_doc = {"id": i, "text": chosen_title, "metadata": metadata}
 
@@ -119,6 +103,7 @@ def main():
     arg_parser.add_argument("input_file", type=str)
     arg_parser.add_argument("output_file", type=str)
     arg_parser.add_argument("--force-ids-path", type=str, default=None)
+    arg_parser.add_argument("--prefer-pages", action="store_true")
     args = arg_parser.parse_args()
 
     parse_documents(**vars(args))

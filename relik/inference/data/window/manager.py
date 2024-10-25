@@ -9,8 +9,7 @@ from relik.inference.data.splitters.spacy_sentence_splitter import SpacySentence
 from relik.inference.data.tokenizers.base_tokenizer import BaseTokenizer
 from relik.reader.data.relik_reader_sample import RelikReaderSample
 from relik.inference.data.objects import AnnotationType, TaskType
-
-
+
 class WindowManager:
     def __init__(
         self, tokenizer: BaseTokenizer, splitter: BaseSentenceSplitter | None = None
@@ -61,7 +60,7 @@ class WindowManager:
             documents = [documents]
 
         if doc_ids is not None:
-            if isinstance(doc_ids, int):
+            if isinstance(doc_ids, (str, int)):
                 doc_ids = [doc_ids]
 
             # check doc_id and documents have the same length
@@ -199,6 +198,7 @@ class WindowManager:
                         str(w.idx + len(w.text)): w.i for i, w in enumerate(window)
                     },
                 )
+                sample._d["token_offset"] = sample.char2token_start[str(window_text_start)]
                 if mentions is not None and len(sample.spans) == 0:
                     windowed_blank_documents.append(sample)
                 else:

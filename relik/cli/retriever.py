@@ -3,7 +3,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import hydra
 import torch
@@ -66,6 +66,8 @@ def create_index(
     document_file_type: str = "jsonl",
     passage_encoder_name_or_path: str | None = None,
     indexer_class: str = "relik.retriever.indexers.inmemory.InMemoryDocumentIndex",
+    metadata_fields: str | None = None,
+    separator: str | None = None,
     batch_size: int = 512,
     num_workers: int = 4,
     passage_max_length: int = 64,
@@ -115,6 +117,8 @@ def create_index(
         None
     """
 
+    metadata_fields = metadata_fields.split(",") if metadata_fields else None
+
     if push_to_hub:
         if not repo_id:
             raise ValueError("`repo_id` must be provided when `push_to_hub=True`")
@@ -138,7 +142,7 @@ def create_index(
     logger.info("Loading document index")
     logger.info(f"Loaded {len(documents)} documents")
     indexer = get_callable_from_string(indexer_class)(
-        documents, device=index_device, precision=precision
+        documents, device=index_device, precision=precision, metadata_fields=metadata_fields, separator=separator
     )
 
     retriever = GoldenRetriever(
@@ -222,6 +226,9 @@ def add_candidates(
     Returns:
         None
     """
+
+    logger.info(f"Loading retriever from {question_encoder_name_or_path}")
+
     retriever = GoldenRetriever(
         question_encoder=question_encoder_name_or_path,
         passage_encoder=passage_encoder_name_or_path,
@@ -318,10 +325,10 @@ def add_candidates(
                                     relation = triplet["relation"]
                                     if relation.lower() in candidate_titles:
                                         correct += 1
-                                    else:
-                                        logger.debug(
-                                            f"Did not find `{relation.lower()}` in candidates"
-                                        )
+                                    # else:
+                                    #     logger.debug(
+                                    #         f"Did not find `{relation.lower()}` in candidates"
+                                    #     )
                                     total += 1
                         else:
                             sample["span_candidates"] = candidate_titles
@@ -341,10 +348,10 @@ def add_candidates(
                                         in candidate_titles_lower
                                     ):
                                         correct += 1
-                                    else:
-                                        logger.debug(
-                                            f"Did not find `{label.replace('_', ' ').lower()}` in candidates"
-                                        )
+                                    # else:
+                                    #     logger.debug(
+                                    #         f"Did not find `{label.replace('_', ' ').lower()}` in candidates"
+                                    #     )
                                     total += 1
                         output_data.append(sample)
 
@@ -381,25 +388,28 @@ def add_candidates(
                                 relation = triplet["relation"]
                                 if relation.lower() in candidate_titles:
                                     correct += 1
-                                else:
-                                    logger.debug(
-                                        f"Did not find `{relation.lower()}` in candidates"
-                                    )
+                                # else:
+                                #     logger.debug(
+                                #         f"Did not find `{relation.lower()}` in candidates"
+                                #     )
                                 total += 1
                     else:
                         sample["span_candidates"] = candidate_titles
                         # sample["window_candidates"] = candidate_titles
                         sample["span_candidates_scores"] = [c.score for c in retrieved]
                         if log_recall:
+                            candidate_titles_lower = [
+                                candidate.replace("_", " ").lower() for candidate in candidate_titles
+                            ]
                             for ss, se, label in sample["window_labels"]:
                                 if label == "--NME--":
                                     continue
-                                if label.replace("_", " ").lower() in candidate_titles:
+                                if label.replace("_", " ").lower() in candidate_titles_lower:
                                     correct += 1
-                                else:
-                                    logger.debug(
-                                        f"Did not find `{label.replace('_', ' ').lower()}` in candidates"
-                                    )
+                                # else:
+                                #     logger.debug(
+                                #         f"Did not find `{label.replace('_', ' ').lower()}` in candidates"
+                                #     )
                                 total += 1
                     output_data.append(sample)
 
