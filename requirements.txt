@@ -1,6 +1,6 @@
 #------- Core dependencies -------
 --extra-index-url https://download.pytorch.org/whl/cu12.1
-torch==2.3.1
+torch>=2.3.1
 
 transformers[sentencepiece]>=4.41,<4.42
 rich>=13.0.0,<14.0.0
