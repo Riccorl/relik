@@ -114,9 +114,14 @@ def preprocess_sample(
     )
 
     if "window_labels" in relik_sample._d:
-        relik_sample.window_labels = [
-            (s, e, l.replace("_", " ")) for s, e, l in relik_sample.window_labels
-        ]
+        try:
+            relik_sample.window_labels = [
+                (s, e, l.replace("_", " ")) for s, e, l in relik_sample.window_labels
+            ]
+        except:
+            print(f"Error in {relik_sample.doc_id} with labels:")
+            print(relik_sample.window_labels)
+            sys.exit(1)
 
 
 class TokenizationOutput(NamedTuple):
