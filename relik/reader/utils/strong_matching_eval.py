@@ -24,6 +24,35 @@ class StrongMatching:
             return 0.0
         return overlap / gold_length
 
+    def _count_weak_span_matches(
+        self,
+        predicted_spans: set[Tuple[int, int]],
+        gold_spans: set[Tuple[int, int]],
+    ) -> int:
+        available_gold = set(gold_spans)
+        matched_predictions = 0
+
+        for pred_start, pred_end in predicted_spans:
+            best_gold_match = None
+            best_overlap = 0.0
+
+            for gold_start, gold_end in available_gold:
+                overlap_ratio = self._span_overlap_ratio(
+                    (pred_start, pred_end), (gold_start, gold_end)
+                )
+                if (
+                    overlap_ratio >= self.weak_match_threshold
+                    and overlap_ratio > best_overlap
+                ):
+                    best_overlap = overlap_ratio
+                    best_gold_match = gold_annotation
+
+            if best_gold_match is not None:
+                available_gold.remove(best_gold_match)
+                matched_predictions += 1
+
+        return matched_predictions
+
     def _count_weak_matches(
         self,
         predicted_annotations: set[Tuple[int, int, str]],
@@ -66,6 +95,9 @@ class StrongMatching:
         total_weak_predictions = 0
         total_gold = 0
         correct_span_predictions = 0
+        weak_correct_span_predictions = 0
+        total_weak_span_predictions = 0
+        total_gold_spans = 0
         correct_labels_on_matched_spans = 0
         total_matched_predicted_spans = 0
         total_matched_gold_spans = 0
@@ -96,6 +128,11 @@ class StrongMatching:
             gold_spans = {(s, e) for s, e, _ in gold_annotations}
             matched_spans = predicted_spans.intersection(gold_spans)
             correct_span_predictions += len(matched_spans)
+            weak_correct_span_predictions += self._count_weak_span_matches(
+                predicted_spans, gold_spans
+            )
+            total_weak_span_predictions += len(predicted_spans)
+            total_gold_spans += len(gold_spans)
             total_matched_predicted_spans += len(matched_spans)
             total_matched_gold_spans += len(matched_spans)
 
@@ -158,6 +195,11 @@ class StrongMatching:
         span_precision = safe_divide(correct_span_predictions, total_predictions)
         span_recall = safe_divide(correct_span_predictions, total_gold)
         span_f1 = f1_measure(span_precision, span_recall)
+        weak_span_precision = safe_divide(
+            weak_correct_span_predictions, total_weak_span_predictions
+        )
+        weak_span_recall = safe_divide(weak_correct_span_predictions, total_gold_spans)
+        weak_span_f1 = f1_measure(weak_span_precision, weak_span_recall)
 
         # compute EL metrics
         precision = safe_divide(correct_predictions, total_predictions)
@@ -186,6 +228,8 @@ class StrongMatching:
             "span_precision": span_precision,
             "span_recall": span_recall,
             "span_f1": span_f1,
+            "weak_span_precision": weak_span_precision,
+            "weak_span_recall": weak_span_recall,
             "core_precision": precision,
             "core_recall": recall,
             "weak_core_precision": weak_precision,
@@ -194,6 +238,7 @@ class StrongMatching:
             "matched_span_label_recall": matched_span_label_recall,
             "core_recall-at-k": recall_at_k,
             "core_f1": round(f1, 4),
+            "weak_span_f1": round(weak_span_f1, 4),
             "weak_core_f1": round(weak_f1, 4),
             "matched_span_label_f1": round(matched_span_label_f1, 4),
             "wrong-for-candidates": wrong_for_candidates,

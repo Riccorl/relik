@@ -61,6 +61,8 @@ class RelikReaderSample:
                 for k, v in self._d.items()
                 if k
                 not in {
+                    "_mixin_prediction_position",
+                    "patches",
                     "predicted_window_labels",
                     "span_title_probabilities",
                     "predicted_window_labels_chars",
