@@ -59,7 +59,17 @@ class RelikReaderSample:
             new_obj = {
                 k: v
                 for k, v in self._d.items()
-                if k != "predicted_window_labels" and k != "span_title_probabilities"
+                if k
+                not in {
+                    "predicted_window_labels",
+                    "span_title_probabilities",
+                    "predicted_window_labels_chars",
+                    "probs_window_labels_chars",
+                    "predicted_spans",
+                    "predicted_spans_probabilities",
+                    "predicted_window_labels_words",
+                    "probs_window_labels_words",
+                }
             }
             predicted_window_labels_chars = self.predicted_window_labels_chars or []
             formatted_predictions = []
