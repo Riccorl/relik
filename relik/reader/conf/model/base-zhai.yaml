@@ -12,4 +12,4 @@ optimizer:
     - "bias"
     - LayerNorm.weight
 
-entities_per_forward: 168
+entities_per_forward: 100

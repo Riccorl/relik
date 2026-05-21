@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 from pprint import pprint
 from typing import Optional
 
@@ -18,6 +19,7 @@ def predict(
         model_path, dataset_kwargs={"use_nme": True}, device="cuda"
     )
     samples = list(load_relik_reader_samples(dataset_path))
+    # samples = samples[:100] # debug
     predicted_samples = relik_reader.read(
         samples=samples, token_batch_size=token_batch_size, progress_bar=True
     )
@@ -25,6 +27,7 @@ def predict(
         eval_dict = StrongMatching()(predicted_samples)
         pprint(eval_dict)
     if output_path is not None:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w") as f:
             for sample in predicted_samples:
                 f.write(sample.to_jsons() + "\n")

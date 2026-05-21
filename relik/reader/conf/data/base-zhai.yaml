@@ -1,5 +1,5 @@
-train_dataset_path: "/home/riccar_orlando/relik/data/zhai/relik/train_256-windows_dropped-candidatesall.jsonl"
-val_dataset_path: "/home/riccar_orlando/relik/data/zhai/relik/dev_256-windows_dropped-candidatesall.jsonl"
+train_dataset_path: "/home/riccar_orlando/relik/data/zhai/relik/train_128-windows_dropped-e5-base.jsonl"
+val_dataset_path: "/home/riccar_orlando/relik/data/zhai/relik/dev_128-windows_dropped-e5-base.jsonl"
 
 train_dataset:
   _target_: "relik.reader.data.relik_reader_data.RelikDataset"
@@ -9,9 +9,10 @@ train_dataset:
   random_drop_gold_candidates: 0.05
   noise_param: 0.0
   for_inference: False
-  tokens_per_batch: 4096
+  tokens_per_batch: 8192
   special_symbols: null
   section_size: null
+  use_nme: False
 
 val_dataset:
   _target_: "relik.reader.data.relik_reader_data.RelikDataset"
@@ -21,3 +22,4 @@ val_dataset:
   for_inference: True
   special_symbols: null
   section_size: null
+  use_nme: False
