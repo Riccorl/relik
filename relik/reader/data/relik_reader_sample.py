@@ -61,10 +61,15 @@ class RelikReaderSample:
                 for k, v in self._d.items()
                 if k != "predicted_window_labels" and k != "span_title_probabilities"
             }
-            new_obj["predicted_window_labels"] = [
-                [ss, se, pred_title]
-                for (ss, se), pred_title in self.predicted_window_labels_chars
-            ]
+            predicted_window_labels_chars = self.predicted_window_labels_chars or []
+            formatted_predictions = []
+            for prediction in predicted_window_labels_chars:
+                if len(prediction) == 3:
+                    ss, se, pred_title = prediction
+                else:
+                    (ss, se), pred_title = prediction
+                formatted_predictions.append([ss, se, pred_title])
+            new_obj["predicted_window_labels"] = formatted_predictions
         else:
             new_obj = self._d
         
