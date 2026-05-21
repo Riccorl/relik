@@ -165,8 +165,63 @@ def best_overlapping_annotation(
     return best_candidate
 
 
+def count_weak_overlap_ratio(
+    strong_matching: StrongMatching,
+    predicted_annotation: tuple[int, int, str],
+    gold_annotation: tuple[int, int, str],
+) -> float:
+    pred_start, pred_end, _ = predicted_annotation
+    gold_start, gold_end, _ = gold_annotation
+    return strong_matching._span_overlap_ratio(
+        (pred_start, pred_end), (gold_start, gold_end)
+    )
+
+
+def match_weak_annotations(
+    predicted_annotations: set[tuple[int, int, str]],
+    gold_annotations: set[tuple[int, int, str]],
+    strong_matching: StrongMatching,
+) -> tuple[
+    list[tuple[tuple[int, int, str], tuple[int, int, str], float]],
+    set[tuple[int, int, str]],
+    set[tuple[int, int, str]],
+]:
+    available_gold = set(gold_annotations)
+    matches = []
+    unmatched_predictions = set()
+
+    for predicted_annotation in predicted_annotations:
+        pred_start, pred_end, pred_label = predicted_annotation
+        best_gold_match = None
+        best_overlap = 0.0
+
+        for gold_annotation in available_gold:
+            gold_start, gold_end, gold_label = gold_annotation
+            if pred_label != gold_label:
+                continue
+            overlap_ratio = strong_matching._span_overlap_ratio(
+                (pred_start, pred_end), (gold_start, gold_end)
+            )
+            if (
+                overlap_ratio >= strong_matching.weak_match_threshold
+                and overlap_ratio > best_overlap
+            ):
+                best_overlap = overlap_ratio
+                best_gold_match = gold_annotation
+
+        if best_gold_match is None:
+            unmatched_predictions.add(predicted_annotation)
+            continue
+
+        available_gold.remove(best_gold_match)
+        matches.append((predicted_annotation, best_gold_match, best_overlap))
+
+    return matches, unmatched_predictions, available_gold
+
+
 def compute_debug_stats(
     samples: list[RelikReaderSample],
+    strong_matching: StrongMatching,
 ) -> tuple[dict, dict[str, list[dict]]]:
     false_positive_labels = Counter()
     false_negative_labels = Counter()
@@ -174,6 +229,11 @@ def compute_debug_stats(
     false_positive_texts = Counter()
     false_negative_texts = Counter()
     span_boundary_errors = Counter()
+    weak_false_positive_labels = Counter()
+    weak_false_negative_labels = Counter()
+    weak_false_positive_texts = Counter()
+    weak_false_negative_texts = Counter()
+    weak_near_miss_errors = Counter()
     per_label = defaultdict(lambda: {"tp": 0, "fp": 0, "fn": 0})
 
     examples = {
@@ -181,6 +241,9 @@ def compute_debug_stats(
         "boundary_errors": [],
         "false_positives": [],
         "false_negatives": [],
+        "weak_false_positives": [],
+        "weak_false_negatives": [],
+        "weak_near_misses": [],
     }
 
     for sample in samples:
@@ -199,6 +262,9 @@ def compute_debug_stats(
 
         false_positives = predicted_annotations - gold_annotations
         false_negatives = gold_annotations - predicted_annotations
+        _, weak_false_positives, weak_false_negatives = match_weak_annotations(
+            predicted_annotations, gold_annotations, strong_matching
+        )
 
         for start, end, label in false_positives:
             false_positive_labels[label] += 1
@@ -274,6 +340,74 @@ def compute_debug_stats(
                     }
                 )
 
+        for start, end, label in weak_false_positives:
+            weak_false_positive_labels[label] += 1
+            weak_false_positive_texts[(annotation_text(sample, start, end), label)] += 1
+
+            same_label_gold = [
+                gold_annotation
+                for gold_annotation in weak_false_negatives
+                if gold_annotation[2] == label
+            ]
+            if same_label_gold:
+                overlapping_gold = max(
+                    same_label_gold,
+                    key=lambda gold_annotation: count_weak_overlap_ratio(
+                        strong_matching, (start, end, label), gold_annotation
+                    ),
+                )
+                overlap_ratio = count_weak_overlap_ratio(
+                    strong_matching, (start, end, label), overlapping_gold
+                )
+                if 0 < overlap_ratio < strong_matching.weak_match_threshold:
+                    gold_start, gold_end, gold_label = overlapping_gold
+                    weak_near_miss_errors[
+                        (
+                            annotation_text(sample, gold_start, gold_end),
+                            gold_label,
+                            annotation_text(sample, start, end),
+                            label,
+                            round(overlap_ratio, 4),
+                        )
+                    ] += 1
+                    if len(examples["weak_near_misses"]) < 10:
+                        examples["weak_near_misses"].append(
+                            {
+                                "doc_id": sample.doc_id,
+                                "window_id": sample.window_id,
+                                "gold_text": annotation_text(
+                                    sample, gold_start, gold_end
+                                ),
+                                "gold_label": gold_label,
+                                "predicted_text": annotation_text(sample, start, end),
+                                "predicted_label": label,
+                                "overlap_ratio": round(overlap_ratio, 4),
+                            }
+                        )
+            elif len(examples["weak_false_positives"]) < 10:
+                examples["weak_false_positives"].append(
+                    {
+                        "doc_id": sample.doc_id,
+                        "window_id": sample.window_id,
+                        "text": annotation_text(sample, start, end),
+                        "label": label,
+                    }
+                )
+
+        for start, end, label in weak_false_negatives:
+            weak_false_negative_labels[label] += 1
+            weak_false_negative_texts[(annotation_text(sample, start, end), label)] += 1
+
+            if len(examples["weak_false_negatives"]) < 10:
+                examples["weak_false_negatives"].append(
+                    {
+                        "doc_id": sample.doc_id,
+                        "window_id": sample.window_id,
+                        "text": annotation_text(sample, start, end),
+                        "label": label,
+                    }
+                )
+
     summary = {
         "false_positive_labels": false_positive_labels,
         "false_negative_labels": false_negative_labels,
@@ -281,6 +415,11 @@ def compute_debug_stats(
         "false_positive_texts": false_positive_texts,
         "false_negative_texts": false_negative_texts,
         "span_boundary_errors": span_boundary_errors,
+        "weak_false_positive_labels": weak_false_positive_labels,
+        "weak_false_negative_labels": weak_false_negative_labels,
+        "weak_false_positive_texts": weak_false_positive_texts,
+        "weak_false_negative_texts": weak_false_negative_texts,
+        "weak_near_miss_errors": weak_near_miss_errors,
         "per_label": per_label,
     }
     return summary, examples
@@ -312,6 +451,24 @@ def print_per_label_stats(per_label: dict, top_k: int) -> None:
         )
 
 
+def print_most_frequent_label_stats(per_label: dict, top_k: int) -> None:
+    ranked = []
+    for label, counts in per_label.items():
+        precision = ratio(counts["tp"], counts["tp"] + counts["fp"])
+        recall = ratio(counts["tp"], counts["tp"] + counts["fn"])
+        f1 = ratio(2 * precision * recall, precision + recall) if (precision + recall) else 0.0
+        support = counts["tp"] + counts["fn"]
+        ranked.append((support, label, counts, precision, recall, f1))
+
+    ranked.sort(key=lambda item: (-item[0], item[1]))
+    print("\nMost frequent labels")
+    for support, label, counts, precision, recall, f1 in ranked[:top_k]:
+        print(
+            f"- {label}: support={support} f1={f1:.4f} precision={precision:.4f} "
+            f"recall={recall:.4f} tp={counts['tp']} fp={counts['fp']} fn={counts['fn']}"
+        )
+
+
 def print_counter_section(title: str, entries: list[tuple]) -> None:
     print(f"\n{title}")
     for item, count in entries:
@@ -337,14 +494,15 @@ def main() -> None:
     args = parse_args()
     predicted_samples = load_aligned_predictions(args.gold_path, args.predicted_path)
     doc_level_samples = aggregate_doc_level_samples(predicted_samples)
+    strong_matching = StrongMatching(weak_match_threshold=args.weak_match_threshold)
 
     print("Window-level StrongMatching metrics")
-    pprint(StrongMatching(weak_match_threshold=args.weak_match_threshold)(predicted_samples))
+    pprint(strong_matching(predicted_samples))
 
     print("\nDoc-level StrongMatching metrics")
-    pprint(StrongMatching(weak_match_threshold=args.weak_match_threshold)(doc_level_samples))
+    pprint(strong_matching(doc_level_samples))
 
-    debug_stats, examples = compute_debug_stats(predicted_samples)
+    debug_stats, examples = compute_debug_stats(predicted_samples, strong_matching)
 
     print_counter_section(
         "Most common false positive labels",
@@ -370,12 +528,36 @@ def main() -> None:
         "Most common boundary errors ((gold_text, gold_label, predicted_text, predicted_label))",
         top_counter_entries(debug_stats["span_boundary_errors"], args.top_k),
     )
+    print_counter_section(
+        "Most common weak false positive labels",
+        top_counter_entries(debug_stats["weak_false_positive_labels"], args.top_k),
+    )
+    print_counter_section(
+        "Most common weak false negative labels",
+        top_counter_entries(debug_stats["weak_false_negative_labels"], args.top_k),
+    )
+    print_counter_section(
+        "Most common weak false positive spans ((text, label))",
+        top_counter_entries(debug_stats["weak_false_positive_texts"], args.top_k),
+    )
+    print_counter_section(
+        "Most common weak false negative spans ((text, label))",
+        top_counter_entries(debug_stats["weak_false_negative_texts"], args.top_k),
+    )
+    print_counter_section(
+        "Most common weak near misses ((gold_text, gold_label, predicted_text, predicted_label, overlap_ratio))",
+        top_counter_entries(debug_stats["weak_near_miss_errors"], args.top_k),
+    )
+    print_most_frequent_label_stats(debug_stats["per_label"], args.top_k)
     print_per_label_stats(debug_stats["per_label"], args.top_k)
 
     print_examples("Label confusion examples", examples["label_confusions"])
     print_examples("Boundary error examples", examples["boundary_errors"])
     print_examples("False positive examples", examples["false_positives"])
     print_examples("False negative examples", examples["false_negatives"])
+    print_examples("Weak false positive examples", examples["weak_false_positives"])
+    print_examples("Weak false negative examples", examples["weak_false_negatives"])
+    print_examples("Weak near miss examples", examples["weak_near_misses"])
 
 
 if __name__ == "__main__":
