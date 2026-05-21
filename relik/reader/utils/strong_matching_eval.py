@@ -45,7 +45,7 @@ class StrongMatching:
                     and overlap_ratio > best_overlap
                 ):
                     best_overlap = overlap_ratio
-                    best_gold_match = gold_annotation
+                    best_gold_match = (gold_start, gold_end)
 
             if best_gold_match is not None:
                 available_gold.remove(best_gold_match)
